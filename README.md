@@ -1,15 +1,3 @@
-# LLM 中国象棋对战程序 (LLM Xiangqi Arena)
-
-基于大语言模型的中国象棋对战程序，支持多种 LLM Provider。
-
-## 功能特性
-
-- 中国象棋完整棋规实现 (包括将军、应将、困毙判断)
-- 支持多种 LLM Provider: DeepSeek, MiniMax, GLM, MiMo
-- 支持 Referee Agent 校验走步合法性
-- MCP Tools 集成 (棋谱分析、局面评估)
-- 完整的游戏状态序列化和日志记录
-
 ## 项目结构
 
 ```
@@ -54,49 +42,3 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
-
-## 配置说明
-
-### LLM Provider
-
-| Provider | Model | Config Key |
-|----------|-------|------------|
-| DeepSeek | deepseek-chat | `provider: deepseek` |
-| MiniMax | MiniMax-M2.7 | `provider: minimax` |
-| GLM | glm-4 | `provider: glm` |
-| MiMo | mimo-v2-pro | `provider: mimo` |
-
-### Agent 配置
-
-```yaml
-agent:
-  name: "Agent1"
-  color: "Red"          # Red 或 Black
-  use_tools: false
-  use_reflection: false
-
-llm:
-  provider: "deepseek"
-  api_key: "YOUR_API_KEY"
-  temperature: 0.7
-  max_tokens: 2048
-```
-
-## 开发
-
-### 运行测试
-
-```bash
-pytest
-```
-
-### 代码格式化
-
-```bash
-ruff check .
-ruff format .
-```
-
-## License
-
-MIT
