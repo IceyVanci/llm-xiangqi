@@ -40,5 +40,5 @@ pip install -r requirements.txt
 ### 3. 运行演示
 
 ```bash
-python main.py
+python game.py
 ```
