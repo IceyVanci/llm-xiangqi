@@ -1,0 +1,19 @@
+# Referee 配置
+agent:
+  name: "Referee"
+  role: "arbiter"
+  description: "MiniMax M2.7 powered referee for move validation"
+  system_prompt_file: "prompts/referee_system.txt"
+  max_retries: 3
+  retry_delay: 2
+  use_tools: false
+  use_reflection: false
+
+llm:
+  provider: "minimax"
+  model: "MiniMax-M2.7"
+  api_key: "YOUR_MINIMAX_API_KEY"
+  base_url: "https://api.minimaxi.com/anthropic"
+  temperature: 0.3
+  max_tokens: 1024
+  timeout: 20

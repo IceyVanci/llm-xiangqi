@@ -1,0 +1,21 @@
+# 游戏全局配置
+game:
+  initial_fen: "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1"
+  time_control:
+    enabled: false
+    seconds_per_turn: 60
+  max_turns: 200
+
+mcp_tools:
+  enabled: true
+  tools_dir: "data/opening_books"
+  pikafish:
+    enabled: false
+    path: "engines/pikafish.exe"
+    depth: 15
+    threads: 4
+
+logging:
+  level: "INFO"
+  file: "logs/game.log"
+  console: true

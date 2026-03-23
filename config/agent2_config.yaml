@@ -1,0 +1,19 @@
+# Agent2 (MiMo) 配置 - 黑方
+agent:
+  name: "Agent2"
+  color: "Black"
+  description: "MiMo-V2-Pro powered player"
+  system_prompt_file: "prompts/agent_system.txt"
+  max_retries: 3
+  retry_delay: 2
+  use_tools: false
+  use_reflection: false
+
+llm:
+  provider: "mimo"
+  model: "mimo-v2-pro"
+  api_key: "YOUR_MIMO_API_KEY"
+  base_url: "https://api.xiaomimimo.com/v1"
+  temperature: 0.7
+  max_tokens: 2048
+  timeout: 60
