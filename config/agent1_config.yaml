@@ -3,7 +3,7 @@ agent:
   name: "Agent1"
   color: "Red"
   description: "DeepSeek powered player"
-  system_prompt_file: "prompts/agent_system.txt"
+  system_prompt_file: "prompts/agent_default.txt"
   max_retries: 3
   retry_delay: 2
   use_tools: false
@@ -12,7 +12,7 @@ agent:
 llm:
   provider: "deepseek"
   model: "deepseek-chat"
-  api_key: "YOUR_DEEPSEEK_API_KEY"
+  api_key: "${DEEPSEEK_API_KEY}"  # 替换为你的DeepSeek API Key
   base_url: "https://api.deepseek.com"
   temperature: 0.7
   max_tokens: 2048

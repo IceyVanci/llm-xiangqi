@@ -16,8 +16,9 @@ class PikafishEngine:
     使用UCCI协议与Pikafish引擎通信
     """
 
-    _instance: Optional['PikafishEngine'] = None
+    _instance: Optional["PikafishEngine"] = None
     _lock = threading.Lock()
+    _warned = False
 
     def __init__(self, path: str = "pikafish.exe", depth: int = 15):
         self.path = path
@@ -27,7 +28,9 @@ class PikafishEngine:
         self._init()
 
     @classmethod
-    def get_instance(cls, path: str = "pikafish.exe", depth: int = 15) -> 'PikafishEngine':
+    def get_instance(
+        cls, path: str = "pikafish.exe", depth: int = 15
+    ) -> "PikafishEngine":
         """获取单例实例"""
         if cls._instance is None:
             with cls._lock:
@@ -46,6 +49,7 @@ class PikafishEngine:
             except:
                 pass
         cls._instance = None
+        cls._warned = False
 
     def _init(self):
         """初始化引擎"""
@@ -55,7 +59,7 @@ class PikafishEngine:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 text=True,
-                bufsize=1
+                bufsize=1,
             )
             self._send("ucci")
             self._read_until("ucciok", timeout=10)
@@ -65,7 +69,11 @@ class PikafishEngine:
             self._read_until("readyok", timeout=10)
             self._initialized = True
         except Exception as e:
-            print(f"Warning: Pikafish initialization failed: {e}")
+            if not PikafishEngine._warned:
+                print(
+                    f"Warning: Pikafish engine not available. Position evaluation disabled. ({e})"
+                )
+                PikafishEngine._warned = True
             self.process = None
             self._initialized = False
 
@@ -80,6 +88,7 @@ class PikafishEngine:
         if not self.process:
             return ""
         import select
+
         start = time.time()
         while time.time() - start < timeout:
             if select.select([self.process.stdout], [], [], 0.1)[0]:
@@ -121,7 +130,7 @@ class PikafishEngine:
                 "bestmove": None,
                 "pv": [],
                 "depth": 0,
-                "error": "Engine not available"
+                "error": "Engine not available",
             }
 
         depth = depth or self.depth
@@ -134,7 +143,6 @@ class PikafishEngine:
             bestmove = None
             score = 0
 
-            # 读取直到收到bestmove
             while True:
                 line = self._read_line(timeout=10)
                 if not line:
@@ -147,7 +155,6 @@ class PikafishEngine:
                         bestmove = parts[1]
                     break
 
-                # 解析score
                 if "score" in line:
                     if "cp" in line:
                         try:
@@ -159,18 +166,16 @@ class PikafishEngine:
                         try:
                             idx = line.index("mate") + 5
                             mate_score = int(line[idx:].split()[0])
-                            # 将杀分数用大数值表示
                             score = 10000 if mate_score > 0 else -10000
                         except:
                             score = 0
 
-            # 解析pv (principal variation)
             pv = []
             for line in info_lines:
                 if " pv " in line:
                     try:
                         pv_idx = line.index("pv") + 3
-                        pv = line[pv_idx:].split()[:5]  # 只取前5步
+                        pv = line[pv_idx:].split()[:5]
                     except:
                         pass
                     break
@@ -180,7 +185,7 @@ class PikafishEngine:
                 "bestmove": bestmove,
                 "pv": pv,
                 "depth": depth,
-                "evaluation": self._interpret_score(score)
+                "evaluation": self._interpret_score(score),
             }
 
         except Exception as e:
@@ -189,7 +194,7 @@ class PikafishEngine:
                 "bestmove": None,
                 "pv": [],
                 "depth": depth,
-                "error": str(e)
+                "error": str(e),
             }
 
     def _interpret_score(self, score: int) -> str:
@@ -209,18 +214,10 @@ class PikafishEngine:
         else:
             return "大劣"
 
-    def get_legal_moves_scored(self, fen: str, depth: int = 12) -> List[Tuple[str, int]]:
-        """获取按评分排序的合法走步
-
-        Args:
-            fen: FEN字符串
-            depth: 搜索深度
-
-        Returns:
-            [(move, centipawn_score), ...] 按评分降序
-        """
-        # 这个功能需要更复杂的实现
-        # 暂时返回空列表
+    def get_legal_moves_scored(
+        self, fen: str, depth: int = 12
+    ) -> List[Tuple[str, int]]:
+        """获取按评分排序的合法走步"""
         return []
 
     def close(self):
@@ -242,15 +239,7 @@ class PositionEvalTool:
         self.engine = PikafishEngine.get_instance(pikafish_path, depth)
 
     async def execute(self, fen: str, depth: int = 15) -> Dict[str, Any]:
-        """执行局面评估
-
-        Args:
-            fen: FEN字符串
-            depth: 搜索深度
-
-        Returns:
-            评估结果
-        """
+        """执行局面评估"""
         result = self.engine.evaluate(fen, depth)
         return {
             "success": True,
@@ -260,7 +249,7 @@ class PositionEvalTool:
             "principal_variation": result.get("pv", []),
             "depth": result.get("depth", depth),
             "evaluation": result.get("evaluation", "未知"),
-            "error": result.get("error")
+            "error": result.get("error"),
         }
 
     def is_available(self) -> bool:
