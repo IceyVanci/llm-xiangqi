@@ -11,3 +11,6 @@ anthropic>=0.20.0
 # Optional: for async HTTP
 aiohttp>=3.9.0
 httpx>=0.26.0
+
+# 3D GUI
+pyglet>=1.5.0,<2.0
