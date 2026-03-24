@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "mcp__MiniMax__web_search",
-      "Bash(python -c \"import pyglet; print\\(pyglet.version\\)\")",
-      "Bash(python game.py 2>&1 | head -30)"
-    ]
-  }
-}
