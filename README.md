@@ -1,6 +1,6 @@
-# LLM 中国象棋框架 (LLM-Xiangqi)
+# LLM-Xiangqi
 
-**LLM-Xiangqi** 是一个基于 LLM Agent 的中国象棋对战框架，支持多种 LLM 提供者（DeepSeek、GLM、MiniMax、MiMo）。框架内置完整的象棋规则引擎、3D 可视化界面以及灵活的多 Agent 对战架构，可用于 AI 对战、研究 LLM 推理能力、评估不同模型在棋类任务中的表现。
+**基于 LLM Agent 的中国象棋对战框架，支持多种 LLM 提供者（DeepSeek、GLM、MiniMax、MiMo等）。框架内置完整的象棋规则引擎、3D 可视化界面以及灵活的多 Agent 对战架构，可用于 AI 对战、研究 LLM 推理能力、评估不同模型在棋类任务中的表现。
 
 ## 项目结构
 
@@ -70,15 +70,6 @@ python game.py
 可选参数：
 
 - `--turns N` - 最大回合数（默认 100）
-
-## 支持的 LLM 提供者
-
-| 提供者 | 模型示例 | 配置 provider |
-|--------|----------|---------------|
-| DeepSeek | deepseek-chat | `deepseek` |
-| GLM | glm-4 | `glm` |
-| MiniMax | MiniMax-Text-01 | `minimax` |
-| MiMo | MiMo-7B | `mimo` |
 
 ## 功能特性
 
