@@ -1,4 +1,4 @@
-# LLM-Xiangqi
+# LLM-Xiangqi（WIP）
 
 基于 LLM Agent 的中国象棋对战框架，支持多种 LLM 提供者（DeepSeek、GLM、MiniMax、MiMo等）。框架内置完整的象棋规则引擎、3D 可视化界面以及灵活的多 Agent 对战架构，可用于 AI 对战、研究 LLM 推理能力、评估不同模型在棋类任务中的表现。
 
