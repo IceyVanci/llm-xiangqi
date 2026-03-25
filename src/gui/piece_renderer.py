@@ -11,13 +11,20 @@ from pyglet import gl
 from PIL import Image, ImageDraw, ImageFont
 
 PIECE_LABELS = {
-    'K': '帥', 'k': '將',
-    'A': '仕', 'a': '士',
-    'B': '相', 'b': '象',
-    'N': '馬', 'n': '馬',
-    'R': '車', 'r': '車',
-    'C': '炮', 'c': '炮',
-    'P': '兵', 'p': '卒',
+    "K": "帥",
+    "k": "將",
+    "A": "仕",
+    "a": "士",
+    "B": "相",
+    "b": "象",
+    "N": "馬",
+    "n": "馬",
+    "R": "車",
+    "r": "車",
+    "C": "炮",
+    "c": "炮",
+    "P": "兵",
+    "p": "卒",
 }
 
 
@@ -36,7 +43,12 @@ class PieceRenderer:
             return
 
         font = None
-        for font_name in ["msyh.ttc", "simhei.ttf", "simsun.ttc", "C:/Windows/Fonts/simhei.ttf"]:
+        for font_name in [
+            "msyh.ttc",
+            "simhei.ttf",
+            "simsun.ttc",
+            "C:/Windows/Fonts/simhei.ttf",
+        ]:
             try:
                 font = ImageFont.truetype(font_name, 160)
                 break
@@ -75,13 +87,24 @@ class PieceRenderer:
 
             gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
             gl.glTexImage2D(
-                gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
-                256, 256, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, raw_data
+                gl.GL_TEXTURE_2D,
+                0,
+                gl.GL_RGBA,
+                256,
+                256,
+                0,
+                gl.GL_RGBA,
+                gl.GL_UNSIGNED_BYTE,
+                raw_data,
             )
             gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
             gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
-            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+            gl.glTexParameteri(
+                gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE
+            )
+            gl.glTexParameteri(
+                gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE
+            )
 
             self._textures[char] = texture_id
             self._texture_objs[char] = texture_id  # 保持引用
@@ -94,8 +117,14 @@ class PieceRenderer:
         wood_color = (0.7, 0.5, 0.25)
 
         self._draw_cylinder_3d(self.radius + 0.02, self.height * 0.3, wood_color, 0)
-        self._draw_cylinder_3d(self.radius, self.height * 0.7, base_color, self.height * 0.15)
-        self._draw_textured_disk_top(self.radius, top_color, self.height * 0.85, self._textures.get(piece_char))
+        self._draw_cylinder_3d(
+            self.radius, self.height * 0.7, base_color, self.height * 0.15
+        )
+
+        texture_id = self._textures.get(piece_char) if self._textures else None
+        self._draw_textured_disk_top(
+            self.radius, top_color, self.height * 0.85, texture_id
+        )
 
     def _draw_cylinder_3d(self, radius, height, color, y_offset):
         segments = 24
@@ -150,10 +179,14 @@ class PieceRenderer:
             gl.glBegin(gl.GL_QUADS)
             gl.glNormal3f(0, 1, 0)
             size = radius * 0.8
-            gl.glTexCoord2f(0.0, 0.0); gl.glVertex3f(-size, 0, -size)
-            gl.glTexCoord2f(1.0, 0.0); gl.glVertex3f(size, 0, -size)
-            gl.glTexCoord2f(1.0, 1.0); gl.glVertex3f(size, 0, size)
-            gl.glTexCoord2f(0.0, 1.0); gl.glVertex3f(-size, 0, size)
+            gl.glTexCoord2f(0.0, 0.0)
+            gl.glVertex3f(-size, 0, -size)
+            gl.glTexCoord2f(1.0, 0.0)
+            gl.glVertex3f(size, 0, -size)
+            gl.glTexCoord2f(1.0, 1.0)
+            gl.glVertex3f(size, 0, size)
+            gl.glTexCoord2f(0.0, 1.0)
+            gl.glVertex3f(-size, 0, size)
             gl.glEnd()
 
             gl.glDisable(gl.GL_BLEND)

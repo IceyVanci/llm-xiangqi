@@ -65,8 +65,16 @@ class ChessBoardRenderer:
 
         # 绘制九宫格斜线
         for offset_z in [0, 7]:
-            draw.line([to_px(3, offset_z), to_px(5, offset_z + 2)], fill=line_color, width=line_width)
-            draw.line([to_px(3, offset_z + 2), to_px(5, offset_z)], fill=line_color, width=line_width)
+            draw.line(
+                [to_px(3, offset_z), to_px(5, offset_z + 2)],
+                fill=line_color,
+                width=line_width,
+            )
+            draw.line(
+                [to_px(3, offset_z + 2), to_px(5, offset_z)],
+                fill=line_color,
+                width=line_width,
+            )
 
         # 绘制兵/炮定位十字标记
         def draw_mark(cx, cz):
@@ -77,8 +85,12 @@ class ChessBoardRenderer:
                         px1, py1 = to_px(cx + dx * gap, cz + dz * gap)
                         px2, py2 = to_px(cx + dx * (gap + length), cz + dz * gap)
                         px3, py3 = to_px(cx + dx * gap, cz + dz * (gap + length))
-                        draw.line([px1, py1, px2, py2], fill=line_color, width=line_width)
-                        draw.line([px1, py1, px3, py3], fill=line_color, width=line_width)
+                        draw.line(
+                            [px1, py1, px2, py2], fill=line_color, width=line_width
+                        )
+                        draw.line(
+                            [px1, py1, px3, py3], fill=line_color, width=line_width
+                        )
 
         marks = [(1, 2), (7, 2), (1, 7), (7, 7)]
         for col in [0, 2, 4, 6, 8]:
@@ -88,7 +100,12 @@ class ChessBoardRenderer:
 
         # 绘制楚河汉界文字
         font = None
-        for font_name in ["msyh.ttc", "simhei.ttf", "simsun.ttc", "C:/Windows/Fonts/simhei.ttf"]:
+        for font_name in [
+            "msyh.ttc",
+            "simhei.ttf",
+            "simsun.ttc",
+            "C:/Windows/Fonts/simhei.ttf",
+        ]:
             try:
                 font = ImageFont.truetype(font_name, 120)
                 break
@@ -122,8 +139,15 @@ class ChessBoardRenderer:
 
         gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
         gl.glTexImage2D(
-            gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
-            img_w, img_h, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, raw_data
+            gl.GL_TEXTURE_2D,
+            0,
+            gl.GL_RGBA,
+            img_w,
+            img_h,
+            0,
+            gl.GL_RGBA,
+            gl.GL_UNSIGNED_BYTE,
+            raw_data,
         )
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
@@ -134,6 +158,9 @@ class ChessBoardRenderer:
         return texture_id
 
     def render(self):
+        if self.texture_id is None:
+            return
+
         w, h = self.board_width, self.board_height
         t = self.board_thickness
         fw = self.frame_width

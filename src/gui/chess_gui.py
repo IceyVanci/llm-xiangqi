@@ -11,7 +11,6 @@ os.environ["PYGLET_DEBUG_GL"] = "0"
 os.environ["PYGLET_SHADOW_WINDOW"] = "False"
 
 import threading
-import time
 import math
 from typing import Optional
 from ctypes import c_float
@@ -57,8 +56,10 @@ class ChessGUI:
         self._running = False
         self._thread: Optional[threading.Thread] = None
 
-        # 线程锁，保护共享状态
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._move_queue: list = []
+        self._ready = threading.Event()
+        self._init_error: Optional[str] = None
 
     def _parse_fen(self, fen: str):
         """解析FEN格式的棋盘状态"""
@@ -78,6 +79,31 @@ class ChessGUI:
                     x = col_idx
                     self.pieces[(x, z)] = char
                     col_idx += 1
+
+    def _sync_pieces_from_fen(self):
+        """从 self.fen 同步 self.pieces（单一数据源）"""
+        if self.fen:
+            self._parse_fen(self.fen)
+
+    def _validate_state(self) -> bool:
+        """校验 pieces 与 fen 一致性"""
+        if not self.fen:
+            return True
+
+        expected_pieces = {}
+        parts = self.fen.split()
+        position = parts[0]
+        rows = position.split("/")
+        for row_idx, row in enumerate(rows):
+            col_idx = 0
+            for char in row:
+                if char.isdigit():
+                    col_idx += int(char)
+                else:
+                    expected_pieces[(col_idx, row_idx)] = char
+                    col_idx += 1
+
+        return self.pieces == expected_pieces
 
     def _iccs_to_coords(self, iccs_move: str) -> tuple:
         """将ICCS坐标转换为棋盘坐标
@@ -102,10 +128,22 @@ class ChessGUI:
         fen: Optional[str] = None,
         is_game_over: bool = False,
     ):
-        """更新棋盘状态（线程安全）"""
+        """更新棋盘状态（线程安全）- fen作为唯一数据源"""
+        if not self._ready.is_set():
+            self._move_queue.append((move, fen, is_game_over))
+            return
+
         with self._lock:
-            if fen:
-                self._parse_fen(fen)
+            if self.animating_piece:
+                self._move_queue.append((move, fen, is_game_over))
+                return
+
+            if is_game_over:
+                self._move_queue.clear()
+                if fen:
+                    self.fen = fen
+                    self._sync_pieces_from_fen()
+                return
 
             if move and fen:
                 coords = self._iccs_to_coords(move)
@@ -116,24 +154,23 @@ class ChessGUI:
                     if moving_char:
                         captured = self.pieces.get(to_pos)
 
-                        # 只设置动画状态，在主线程update_animation中完成实际移动
                         self.animating_piece = {
                             "from": from_pos,
                             "to": to_pos,
                             "char": moving_char,
                             "captured": captured,
                             "progress": 0,
+                            "target_fen": fen,
                         }
-
-                        # 从原位置移除棋子
-                        if from_pos in self.pieces:
-                            del self.pieces[from_pos]
-
-    def capture_piece(self, x, z):
-        """移除指定位置的棋子（吃子动画）"""
-        key = (x, z)
-        if key in self.pieces:
-            del self.pieces[key]
+                    else:
+                        self.fen = fen
+                        self._sync_pieces_from_fen()
+                else:
+                    self.fen = fen
+                    self._sync_pieces_from_fen()
+            elif fen:
+                self.fen = fen
+                self._sync_pieces_from_fen()
 
     def _setup_lighting(self):
         """设置OpenGL光照与材质"""
@@ -273,29 +310,31 @@ class ChessGUI:
         anim_pos = None
         anim_from = None
         anim_to = None
-        if self.animating_piece:
-            prog = min(1.0, self.animating_piece["progress"])
-            from_x = self.animating_piece["from"][0]
-            from_z = self.animating_piece["from"][1]
-            to_x = self.animating_piece["to"][0]
-            to_z = self.animating_piece["to"][1]
+        captured_char = None
 
-            curr_x = from_x + (to_x - from_x) * prog
-            curr_z = from_z + (to_z - from_z) * prog
-            anim_pos = (curr_x, curr_z, self.animating_piece["char"])
-            anim_from = (from_x, from_z)
-            anim_to = (to_x, to_z)
+        with self._lock:
+            pieces_snapshot = dict(self.pieces)
+            if self.animating_piece:
+                prog = min(1.0, self.animating_piece["progress"])
+                from_x = int(self.animating_piece["from"][0])
+                from_z = int(self.animating_piece["from"][1])
+                to_x = int(self.animating_piece["to"][0])
+                to_z = int(self.animating_piece["to"][1])
+
+                curr_x = from_x + (to_x - from_x) * prog
+                curr_z = from_z + (to_z - from_z) * prog
+                anim_pos = (curr_x, curr_z, self.animating_piece["char"])
+                anim_from = (from_x, from_z)
+                anim_to = (to_x, to_z)
+                captured_char = self.animating_piece.get("captured")
 
         board_y = self.board_renderer.board_thickness
 
-        for (x, z), char in list(self.pieces.items()):
-            if (
-                anim_from
-                and abs(x - anim_from[0]) < 0.1
-                and abs(z - anim_from[1]) < 0.1
-            ):
+        for (x, z), char in pieces_snapshot.items():
+            ix, iz = int(x), int(z)
+            if anim_from and ix == anim_from[0] and iz == anim_from[1]:
                 continue
-            if anim_to and abs(x - anim_to[0]) < 0.1 and abs(z - anim_to[1]) < 0.1:
+            if anim_to and ix == anim_to[0] and iz == anim_to[1]:
                 continue
 
             gl.glPushMatrix()
@@ -303,29 +342,23 @@ class ChessGUI:
             self.piece_renderer.render_piece(char)
             gl.glPopMatrix()
 
-        # 渲染移动中的棋子
         if anim_pos:
             gl.glPushMatrix()
             gl.glTranslatef(anim_pos[0], board_y, anim_pos[1])
             self.piece_renderer.render_piece(anim_pos[2])
             gl.glPopMatrix()
 
-        # 渲染被吃棋子的淡出效果
-        if self.animating_piece and self.animating_piece["captured"]:
-            if self.animating_piece["progress"] > 0.5:
-                alpha = 1.0 - (self.animating_piece["progress"] - 0.5) * 2
-                gl.glColor4f(1.0, 1.0, 1.0, alpha)
-                gl.glPushMatrix()
-                gl.glTranslatef(
-                    self.animating_piece["to"][0],
-                    board_y,
-                    self.animating_piece["to"][1],
-                )
-                self.piece_renderer.render_piece(self.animating_piece["captured"])
-                gl.glPopMatrix()
-                gl.glColor4f(1.0, 1.0, 1.0, 1.0)
+        if anim_to and captured_char:
+            with self._lock:
+                if self.animating_piece and self.animating_piece["progress"] > 0.5:
+                    alpha = 1.0 - (self.animating_piece["progress"] - 0.5) * 2
+                    gl.glColor4f(1.0, 1.0, 1.0, alpha)
+                    gl.glPushMatrix()
+                    gl.glTranslatef(anim_to[0], board_y, anim_to[1])
+                    self.piece_renderer.render_piece(captured_char)
+                    gl.glPopMatrix()
+                    gl.glColor4f(1.0, 1.0, 1.0, 1.0)
 
-        # 绘制AI名称标签（右上角）
         self._draw_agent_labels()
 
     def on_mouse_press(self, x, y, button, modifiers):
@@ -356,21 +389,16 @@ class ChessGUI:
             if self.animating_piece:
                 self.animating_piece["progress"] += dt / self.animation_duration
                 if self.animating_piece["progress"] >= 1.0:
-                    to_x, to_z = self.animating_piece["to"]
-                    char = self.animating_piece["char"]
-                    captured = self.animating_piece.get("captured")
-
-                    # 放置移动的棋子到目标位置
-                    self.pieces[(to_x, to_z)] = char
-
-                    # 删除被吃的棋子
-                    if captured:
-                        cap_x, cap_z = self.animating_piece["to"]
-                        cap_key = (cap_x, cap_z)
-                        if cap_key in self.pieces:
-                            del self.pieces[cap_key]
-
+                    target_fen = self.animating_piece.get("target_fen")
                     self.animating_piece = None
+
+                    if target_fen:
+                        self.fen = target_fen
+                        self._sync_pieces_from_fen()
+
+                    if self._move_queue:
+                        move, fen, is_over = self._move_queue.pop(0)
+                        self.update(move=move, fen=fen, is_game_over=is_over)
 
     def run(self):
         """运行GUI（主循环）"""
@@ -392,40 +420,49 @@ class ChessGUI:
         except Exception:
             config = None
 
-        if config:
-            self.window = pyglet.window.Window(
-                width=1024,
-                height=768,
-                caption="中国象棋 - LLM Battle",
-                resizable=True,
-                config=config,
-            )
-        else:
-            self.window = pyglet.window.Window(
-                width=1024,
-                height=768,
-                caption="中国象棋 - LLM Battle",
-                resizable=True,
-            )
+        try:
+            if config:
+                self.window = pyglet.window.Window(
+                    width=1024,
+                    height=768,
+                    caption="中国象棋 - LLM Battle",
+                    resizable=True,
+                    config=config,
+                )
+            else:
+                self.window = pyglet.window.Window(
+                    width=1024,
+                    height=768,
+                    caption="中国象棋 - LLM Battle",
+                    resizable=True,
+                )
 
-        self.window.on_draw = self.on_draw
-        self.window.on_mouse_press = self.on_mouse_press
-        self.window.on_mouse_drag = self.on_mouse_drag
-        self.window.on_mouse_release = self.on_mouse_release
-        self.window.on_mouse_scroll = self.on_mouse_scroll
+            self.window.on_draw = self.on_draw
+            self.window.on_mouse_press = self.on_mouse_press
+            self.window.on_mouse_drag = self.on_mouse_drag
+            self.window.on_mouse_release = self.on_mouse_release
+            self.window.on_mouse_scroll = self.on_mouse_scroll
 
-        # 确保OpenGL上下文处于激活状态
-        self.window.switch_to()
+            self.window.switch_to()
 
-        # 初始化纹理（必须在Window创建后调用）
-        self.board_renderer.init_gl()
-        self.piece_renderer.init_gl()
+            self.board_renderer.init_gl()
+            self.piece_renderer.init_gl()
 
-        pyglet.clock.schedule_interval(self.update_animation, 1 / 60.0)
+            self._ready.set()
 
-        pyglet.app.run()
+            if self._move_queue:
+                move, fen, is_over = self._move_queue.pop(0)
+                self.update(move=move, fen=fen, is_game_over=is_over)
 
-        self._running = False
+            pyglet.clock.schedule_interval(self.update_animation, 1 / 60.0)
+
+            pyglet.app.run()
+
+        except Exception as e:
+            self._init_error = str(e)
+            self._ready.set()
+        finally:
+            self._running = False
 
     def start(self):
         """在新线程中启动GUI"""
@@ -434,6 +471,21 @@ class ChessGUI:
 
         self._thread = threading.Thread(target=self.run, daemon=True)
         self._thread.start()
+
+    def wait_ready(self, timeout: float = 10.0) -> bool:
+        """等待GUI初始化完成
+
+        Args:
+            timeout: 超时时间（秒）
+
+        Returns:
+            True表示GUI已就绪，False表示超时或初始化失败
+        """
+        return self._ready.wait(timeout=timeout) and self._init_error is None
+
+    def is_ready(self) -> bool:
+        """检查GUI是否已就绪"""
+        return self._ready.is_set() and self._init_error is None
 
     def stop(self):
         """停止GUI"""

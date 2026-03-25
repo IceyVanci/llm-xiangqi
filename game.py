@@ -160,11 +160,14 @@ async def run_battle(agent1, agent2, max_turns: int = 100):
     red_name = f"红方:{agent1.config.llm_adapter.model}"
     black_name = f"黑方:{agent2.config.llm_adapter.model}"
     gui = ChessGUI(
-        fen=INITIAL_FEN,
-        red_agent_name=red_name,
-        black_agent_name=black_name
+        fen=INITIAL_FEN, red_agent_name=red_name, black_agent_name=black_name
     )
     gui.start()
+
+    if not gui.wait_ready(timeout=10.0):
+        logger.error("GUI initialization failed or timed out")
+        return {"success": False, "error": "GUI initialization failed"}
+
     controller.register_observer(gui.update)
 
     state = controller.get_current_state()

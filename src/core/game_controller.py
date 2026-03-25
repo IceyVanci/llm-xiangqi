@@ -178,8 +178,11 @@ class LLMAgentGameController(GameController):
         for observer in self._observers:
             try:
                 observer(move, fen, is_game_over)
-            except Exception:
-                pass
+            except Exception as e:
+                from ..utils.logger import get_logger
+
+                logger = get_logger("game", level="ERROR")
+                logger.error(f"Observer notification failed: {e}")
 
     def apply_move(self, agent_name: str, iccs_move: str) -> MoveResult:
         """应用走步（带观察者通知）"""
