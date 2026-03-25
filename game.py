@@ -157,7 +157,13 @@ async def run_battle(agent1, agent2, max_turns: int = 100):
     )
 
     # 创建并启动3D GUI
-    gui = ChessGUI(fen=INITIAL_FEN)
+    red_name = f"红方:{agent1.config.llm_adapter.model}"
+    black_name = f"黑方:{agent2.config.llm_adapter.model}"
+    gui = ChessGUI(
+        fen=INITIAL_FEN,
+        red_agent_name=red_name,
+        black_agent_name=black_name
+    )
     gui.start()
     controller.register_observer(gui.update)
 

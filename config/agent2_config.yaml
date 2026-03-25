@@ -12,7 +12,7 @@ agent:
 llm:
   provider: "mimo"
   model: "mimo-v2-flash"
-  api_key: "YOUR_MIMO_API_KEY"  # 替换为你的MiMo API Key
+  api_key: "sk-choedyvp0h3y86lu3p8neg8xwnzl38dp9pj0x4co0qpvfktq"  # 替换为你的MiMo API Key
   base_url: "https://api.xiaomimimo.com/v1"
   temperature: 0.7
   max_tokens: 2048
