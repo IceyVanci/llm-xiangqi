@@ -207,13 +207,13 @@ class BaseAgent(ABC):
         3. 如果匹配失败，记录详细错误信息
         """
         import re
+        logger = get_logger("agent", level="WARNING")
 
         # 找到所有4字符的ICCS走步（大小写不敏感）
         all_matches = re.findall(r'\b([a-iA-I][0-9][a-iA-I][0-9])\b', content)
 
         if not all_matches:
             # 记录详细错误信息用于调试
-            logger = get_logger("agent", level="WARNING")
             logger.warning(f"_extract_move: 未找到ICCS走步模式，内容前200字符: {content[:200]}")
             return None
 
