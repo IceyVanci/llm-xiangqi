@@ -260,18 +260,40 @@ class LLMAgentGameController(GameController):
             # 投降检测
             if result.resign or result.move == "jxjx":
                 from ..utils.logger import get_logger
+                from .referee_engine import Color
 
                 logger = get_logger("game", level="INFO")
                 agent_name = self.current_agent.config.name
-
-                # 投降门槛：非将棋子 >= 3 时拒绝投降
                 resigner_color = self.current_agent.config.color
+                resigner_color_enum = Color(resigner_color.lower())
+
+                # 计算子力
                 non_king = self._count_non_king_pieces(resigner_color)
-                if non_king >= 3:
+                # 检查是否被将军
+                in_check = self.referee.is_king_in_check(resigner_color_enum)
+                # 检查是否有合法走步（被困毙）
+                has_legal_moves = len(legal_moves) > 0
+
+                # 投降条件（满足任一即可）：
+                # 1. 子力严重不足（<=1个非将棋子）
+                # 2. 子力不足（<=4个非将棋子）且被将军
+                # 3. 无合法走步（被困毙）
+                can_resign = (
+                    non_king <= 1  # 子力严重不足
+                    or (non_king <= 4 and in_check)  # 子力不足且被将军
+                    or not has_legal_moves  # 被困毙
+                )
+
+                if not can_resign:
+                    reason = []
+                    if non_king > 4:
+                        reason.append(f"子力充足({non_king}个非将棋子)")
+                    elif not in_check:
+                        reason.append("未被将军")
                     logger.warning(
-                        f"{agent_name} 子力充足({non_king}个非将棋子)尝试投降，拒绝并继续纠错"
+                        f"{agent_name} {'且'.join(reason)}时尝试投降，拒绝并继续纠错"
                     )
-                    last_error_msg = "你的子力仍然充足，不允许投降。请从合法走步中选择一个。"
+                    last_error_msg = "当前局面不允许投降：子力尚充足或未被将军。请从合法走步中选择一个。"
                     continue
 
                 logger.info(f"{agent_name} 投降认输，原因: {result.thought}")

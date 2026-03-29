@@ -315,11 +315,17 @@ class RefereeEngine:
     def _annotate_move(self, move: Move, piece: Piece) -> List[str]:
         """为单步走步生成语义标注
 
-        检测四类标注：
+        检测十类标注：
         - capture:{piece_type}: 吃子
         - check: 将军
         - repetition_warning: 走后局面已出现≥2次
         - development: 车从底线出发
+        - cross_river: 兵卒过河
+        - central_file: 车/炮占中路
+        - flank: 车/炮占肋道
+        - pin: 牵制
+        - fork:{piece_type}: 捉双
+        - sacrifice:{piece_type}: 弃子
         """
         annotations = []
 
@@ -334,7 +340,23 @@ class RefereeEngine:
                (piece.color == Color.BLACK and move.from_pos.row == 9 and move.to_pos.row < 9):
                 annotations.append("development")
 
-        # 3-4. 将军检测和重复警告（需要模拟走步）
+        # 3. 过河检测（兵卒进入对方区域）
+        if piece.piece_type == PieceType.PAWN:
+            if (piece.color == Color.RED and move.from_pos.row < 5 and move.to_pos.row >= 5) or \
+               (piece.color == Color.BLACK and move.from_pos.row > 4 and move.to_pos.row <= 4):
+                annotations.append("cross_river")
+
+        # 4. 占中检测（车/炮走到中路e列）
+        if piece.piece_type in (PieceType.ROOK, PieceType.CANNON):
+            if move.to_pos.col == 4:  # e列
+                annotations.append("central_file")
+
+        # 5. 占肋检测（车/炮走到肋道d/f列）
+        if piece.piece_type in (PieceType.ROOK, PieceType.CANNON):
+            if move.to_pos.col in (3, 5):  # d列或f列
+                annotations.append("flank")
+
+        # 6-10. 需要模拟走步的检测
         saved_from = self.board.remove_piece(move.from_pos)
         saved_to = self.board.get_piece(move.to_pos)
         self.board.set_piece(move.to_pos, piece)
@@ -350,11 +372,115 @@ class RefereeEngine:
             if "check" not in annotations:
                 annotations.append("repetition_warning")
 
+        # 牵制检测：走步后是否形成牵制
+        pin_result = self._detect_pin(move, piece)
+        if pin_result:
+            annotations.append("pin")
+
+        # 捉双检测：走步后是否同时攻击对方多个棋子
+        fork_target = self._detect_fork(move, piece)
+        if fork_target:
+            annotations.append(f"fork:{fork_target}")
+
+        # 弃子检测：是否主动送吃大子
+        sacrifice = self._detect_sacrifice(move, piece, saved_from)
+        if sacrifice:
+            annotations.append(f"sacrifice:{sacrifice}")
+
         # 恢复棋盘状态
         self.board.set_piece(move.from_pos, saved_from)
         self.board.set_piece(move.to_pos, saved_to)
 
         return annotations
+
+    def _detect_pin(self, move: Move, piece: Piece) -> bool:
+        """检测是否形成牵制
+        
+        牵制定义：当对方某个棋子的移动会暴露其将帅给将军时，该棋子被牵制。
+        检测方式：检查走步后，是否有对方棋子因为保护将帅而不能移动。
+        """
+        enemy_color = piece.color.opposite()
+        enemy_king_pos = self._find_king_position(enemy_color)
+        if not enemy_king_pos:
+            return False
+        
+        # 检查是否有对方棋子位于将帅和当前攻击位置之间
+        # 简化：检查是否有对方棋子被"钉"在将帅方向上
+        for r in range(10):
+            for c in range(9):
+                p = self.board.grid[r][c]
+                if p and p.color == enemy_color and p.piece_type != PieceType.KING:
+                    # 如果这个棋子的移动会导致将帅被将军，则形成牵制
+                    if self._is_defending_king(Position(c, r), p, enemy_king_pos):
+                        return True
+        return False
+
+    def _is_defending_king(self, pos: Position, piece: Piece, king_pos: Position) -> bool:
+        """检查棋子是否在保护将帅（移动会导致将帅被将军）"""
+        # 暂时移除该棋子
+        saved = self.board.remove_piece(pos)
+        
+        # 检查将帅是否因此被将军
+        in_check = self.is_king_in_check(piece.color)
+        
+        # 恢复棋子
+        self.board.set_piece(pos, saved)
+        
+        return in_check
+
+    def _detect_fork(self, move: Move, piece: Piece) -> Optional[str]:
+        """检测是否形成捉双
+        
+        捉双定义：一个棋子同时攻击对方两个或以上高价值棋子（车、马、炮、将）。
+        返回被捉双的最高价值棋子类型。
+        """
+        enemy_color = piece.color.opposite()
+        attacked_pieces = []
+        
+        # 获取该棋子在当前位置能攻击的所有位置
+        attack_moves = self._get_piece_moves(move.to_pos, piece)
+        
+        for target_pos in attack_moves:
+            target = self.board.get_piece(target_pos)
+            if target and target.color == enemy_color:
+                # 记录被攻击的棋子类型（过滤低价值棋子）
+                if target.piece_type in (PieceType.KING, PieceType.ROOK, 
+                                         PieceType.KNIGHT, PieceType.CANNON,
+                                         PieceType.ADVISOR, PieceType.BISHOP):
+                    attacked_pieces.append(target.piece_type.value)
+        
+        # 如果攻击2个或以上高价值棋子，返回最高价值的那个
+        if len(attacked_pieces) >= 2:
+            # 价值排序：King > Rook > Cannon > Knight > Advisor > Bishop
+            value_order = ["king", "rook", "cannon", "knight", "advisor", "bishop"]
+            for v in value_order:
+                if v in attacked_pieces:
+                    return v
+        return None
+
+    def _detect_sacrifice(self, move: Move, piece: Piece, original_piece) -> Optional[str]:
+        """检测是否主动弃子
+        
+        弃子定义：主动将价值>=车的棋子放在可被对方吃掉的位置。
+        返回被弃的棋子类型（如果构成弃子）。
+        """
+        # 只考虑大子（车、马、炮）
+        if piece.piece_type not in (PieceType.ROOK, PieceType.KNIGHT, PieceType.CANNON):
+            return None
+        
+        # 检查目标位置是否可被对方吃掉
+        enemy_color = piece.color.opposite()
+        
+        # 模拟对方回合，看是否能吃掉这个位置的棋子
+        for r in range(10):
+            for c in range(9):
+                p = self.board.grid[r][c]
+                if p and p.color == enemy_color:
+                    moves = self._get_piece_moves(Position(c, r), p)
+                    if move.to_pos in moves:
+                        # 对方可以吃掉这个位置的棋子
+                        return piece.piece_type.value
+        return None
 
     def _get_piece_moves(self, pos: Position, piece: Piece) -> List[Position]:
         """获取指定棋子的所有移动目标（不考虑将军检查）"""

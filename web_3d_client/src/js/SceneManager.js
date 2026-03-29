@@ -326,8 +326,8 @@ export class SceneManager {
    * - 横线：全部绘制（包括row 4和row 5作为河界边界）
    * - 竖线：a列(col 0) 和 i列(col 8) 贯穿河界，其他列在河界处断开
    * 
-   * 坐标系：row 0 -> z = -4.5（远离用户，黑方底线）
-   *        row 9 -> z = 4.5（靠近用户，红方底线）
+   * 坐标系：row 0 -> z = +4.5（靠近用户，红方底线）
+   *        row 9 -> z = -4.5（远离用户，黑方底线）
    */
   _createGridLines() {
     const { width, height, cellSize, colors } = BOARD_CONFIG
@@ -391,11 +391,11 @@ export class SceneManager {
    * 创建九宫格斜线
    * 
    * 标准规范：
-   * - 黑方九宫：row 0-2, col 3-5（底线起3行，中间3列 d-e-f），棋盘上方（z < 0）
-   * - 红方九宫：row 7-9, col 3-5（底线起3行，中间3列 d-e-f），棋盘下方（z > 0）
+   * - 红方九宫：row 0-2, col 3-5（底线起3行，中间3列 d-e-f），棋盘下方（z > 0）
+   * - 黑方九宫：row 7-9, col 3-5（底线起3行，中间3列 d-e-f），棋盘上方（z < 0）
    * 
-   * 坐标系：row 0 -> z = -4.5（远离用户，黑方底线）
-   *        row 9 -> z = 4.5（靠近用户，红方底线）
+   * 坐标系：row 0 -> z = +4.5（靠近用户，红方底线）
+   *        row 9 -> z = -4.5（远离用户，黑方底线）
    */
   _createPalaceLines(halfWidth, halfHeight, cellSize, material) {
     // 列索引：3=d, 4=e, 5=f
@@ -403,27 +403,10 @@ export class SceneManager {
     const midCol = -halfWidth + 4 * cellSize    // e 列（中间）
     const rightCol = -halfWidth + 5 * cellSize  // f 列
     
-    // 黑方九宫（棋盘上方，row 0-2，z < 0）
-    // row 0 -> z = -4.5, row 2 -> z = -2.5
-    const blackTopZ = -halfHeight              // row 0（远离用户）
-    const blackBottomZ = -halfHeight + 2 * cellSize  // row 2
-    
-    // 黑方九宫四角
-    const blackTopLeft = new THREE.Vector3(leftCol, 0.005, blackTopZ)
-    const blackTopRight = new THREE.Vector3(rightCol, 0.005, blackTopZ)
-    const blackBottomLeft = new THREE.Vector3(leftCol, 0.005, blackBottomZ)
-    const blackBottomRight = new THREE.Vector3(rightCol, 0.005, blackBottomZ)
-    
-    // 黑方对角线（连接四角）
-    const diag1 = new THREE.BufferGeometry().setFromPoints([blackTopLeft, blackBottomRight])
-    const diag2 = new THREE.BufferGeometry().setFromPoints([blackTopRight, blackBottomLeft])
-    this.boardGroup.add(new THREE.Line(diag1, material))
-    this.boardGroup.add(new THREE.Line(diag2, material))
-    
-    // 红方九宫（棋盘下方，row 7-9，z > 0）
-    // row 7 -> z = 2.5, row 9 -> z = 4.5
-    const redTopZ = halfHeight - 2 * cellSize   // row 7
-    const redBottomZ = halfHeight               // row 9（靠近用户）
+    // 红方九宫（棋盘下方，row 0-2，z > 0）
+    // row 0 -> z = +4.5, row 2 -> z = +2.5
+    const redTopZ = halfHeight - 2 * cellSize   // row 2
+    const redBottomZ = halfHeight               // row 0（靠近用户）
     
     // 红方九宫四角
     const redTopLeft = new THREE.Vector3(leftCol, 0.005, redTopZ)
@@ -436,6 +419,23 @@ export class SceneManager {
     const diag4 = new THREE.BufferGeometry().setFromPoints([redTopRight, redBottomLeft])
     this.boardGroup.add(new THREE.Line(diag3, material))
     this.boardGroup.add(new THREE.Line(diag4, material))
+    
+    // 黑方九宫（棋盘上方，row 7-9，z < 0）
+    // row 7 -> z = -2.5, row 9 -> z = -4.5
+    const blackTopZ = -halfHeight + 7 * cellSize  // row 7
+    const blackBottomZ = -halfHeight              // row 9（远离用户）
+    
+    // 黑方九宫四角
+    const blackTopLeft = new THREE.Vector3(leftCol, 0.005, blackTopZ)
+    const blackTopRight = new THREE.Vector3(rightCol, 0.005, blackTopZ)
+    const blackBottomLeft = new THREE.Vector3(leftCol, 0.005, blackBottomZ)
+    const blackBottomRight = new THREE.Vector3(rightCol, 0.005, blackBottomZ)
+    
+    // 黑方对角线（连接四角）
+    const diag1 = new THREE.BufferGeometry().setFromPoints([blackTopLeft, blackBottomRight])
+    const diag2 = new THREE.BufferGeometry().setFromPoints([blackTopRight, blackBottomLeft])
+    this.boardGroup.add(new THREE.Line(diag1, material))
+    this.boardGroup.add(new THREE.Line(diag2, material))
   }
 
   /**
@@ -611,12 +611,12 @@ export class SceneManager {
     
     const { cellSize } = BOARD_CONFIG
     
-    // 翻转Z轴：row 0（黑方底线）-> z = -4.5（远离用户）
-    //         row 9（红方底线）-> z = 4.5（靠近用户）
+    // 正确映射：row 0（红方底线）-> z = +4.5（靠近用户）
+    //          row 9（黑方底线）-> z = -4.5（远离用户）
     return {
       x: (colIndex - 4) * cellSize,
       y: 0.04,  // 棋子底部贴合棋盘表面
-      z: (rowIndex - 4.5) * cellSize,
+      z: (4.5 - rowIndex) * cellSize,  // 翻转Z轴
     }
   }
 

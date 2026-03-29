@@ -183,7 +183,9 @@ export class GameStateManager {
           col += parseInt(char)
         } else if (PIECE_NAMES[char]) {
           // 棋子
-          this.board[row][col] = char
+          // 关键修复: FEN row 0 是黑方底线，需要存储到 board[9]
+          // 与引擎的 9-row 翻转保持一致，确保红黑方棋子位置正确对应
+          this.board[9 - row][col] = char
           col++
         }
       }
@@ -241,7 +243,8 @@ export class GameStateManager {
     const [row, col] = index
     
     // 棋盘原点在中心，X 向右，Z 向前
-    // 行 0-9 对应 Z 从 4.5 到 -4.5
+    // 行 0（红方底线）-> Z = +4.5（靠近用户）
+    // 行 9（黑方底线）-> Z = -4.5（远离用户）
     // 列 0-8 对应 X 从 -4 到 4
     return {
       x: (col - 4) * cellSize,

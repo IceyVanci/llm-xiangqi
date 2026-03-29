@@ -206,6 +206,70 @@ class TestResignationGuard:
         assert game_result == GameResult.BLACK_WIN
         assert "Red resigned" in reason
 
+    @pytest.mark.asyncio
+    async def test_resign_accepted_when_in_check(self):
+        """子力中等(2-4个非将棋子)且被将军时可以投降"""
+        # 构造局面：红方有2个非将棋子（车+兵），且被将军
+        # 黑车e1将军红帅e0，红兵a3
+        fen = "4k4/9/9/9/9/9/9/9/4r4/4KR3 w - - 0 1"
+        from src.core.referee_engine import RefereeEngine
+        engine = RefereeEngine(fen)
+
+        red_agent = _make_agent("RedBot", "Red", '{"thought": "被将死了", "move": "jxjx"}')
+        black_agent = _make_agent("BlackBot", "Black", '{"thought": "正常", "move": "a9a8"}')
+
+        controller = LLMAgentGameController(
+            red_agent=red_agent, black_agent=black_agent, referee_engine=engine
+        )
+        result = await controller.play_turn()
+
+        assert result.success
+        assert "投降" in result.thought
+
+        is_over, game_result, reason = controller.is_game_over()
+        assert is_over
+        assert game_result == GameResult.BLACK_WIN
+
+    @pytest.mark.asyncio
+    async def test_resign_rejected_when_not_in_check(self):
+        """子力中等(2-4个非将棋子)但未被将军时不能投降"""
+        # 构造局面：红方有2个非将棋子，但未被将军
+        # 红帅e0 + 红车a0 + 红马b2，黑将e9（不同列避免飞将）
+        fen = "4k4/9/9/9/9/9/9/1N7/9/R6K1 w - - 0 1"
+        from src.core.referee_engine import RefereeEngine
+        engine = RefereeEngine(fen)
+
+        # 第一次投降被拒绝，第二次正常走步
+        mock_adapter = MagicMock()
+        mock_adapter.chat = AsyncMock(
+            side_effect=[
+                LLMResponse(content='{"thought": "不想下了", "move": "jxjx"}'),
+                LLMResponse(content='{"thought": "走车", "move": "a0a1"}'),
+            ]
+        )
+        config = AgentConfig(
+            name="RedBot",
+            color="Red",
+            description="Test",
+            llm_adapter=mock_adapter,
+            system_prompt="Test",
+        )
+        red_agent = LLMAgent(config)
+        black_agent = _make_agent("BlackBot", "Black", '{"thought": "正常", "move": "e9e8"}')
+
+        controller = LLMAgentGameController(
+            red_agent=red_agent, black_agent=black_agent, referee_engine=engine
+        )
+        result = await controller.play_turn()
+
+        # 投降被拒绝后重试，返回正常走步
+        assert result.success
+        assert result.move == "a0a1"
+        
+        # 游戏不应结束
+        is_over, _, _ = controller.is_game_over()
+        assert not is_over
+
 
 class TestResignOnRetry:
     """测试纠错重试时投降"""

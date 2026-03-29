@@ -90,6 +90,22 @@ class PromptBuilder:
             return "重复!"
         if ann == "development":
             return "出车"
+        # 新增：位置标注
+        if ann == "cross_river":
+            return "过河"
+        if ann == "central_file":
+            return "占中"
+        if ann == "flank":
+            return "占肋"
+        # 新增：战术标注
+        if ann == "pin":
+            return "牵制"
+        if ann.startswith("fork:"):
+            piece_type = ann.split(":", 1)[1]
+            return f"抽{self._PIECE_TYPE_CN.get(piece_type, piece_type)}"
+        if ann.startswith("sacrifice:"):
+            piece_type = ann.split(":", 1)[1]
+            return f"弃{self._PIECE_TYPE_CN.get(piece_type, piece_type)}"
         return ann
 
     def _format_game_state(self, state: Dict[str, Any]) -> str:
@@ -111,31 +127,70 @@ class PromptBuilder:
         if annotated_moves:
             lines.append(f"## 合法走步 (共 {len(annotated_moves)} 种)")
 
-            # 按标注类型分组
-            check_capture = []
-            development = []
-            repetition = []
-            other = []
+            # 按标注类型分组（新增战术组和位置组）
+            tactical = []       # 战术组合：捉双、牵制、弃子
+            positional = []     # 战略位置：过河、占中、占肋
+            check_capture = []  # 将军/吃子
+            development = []    # 出子
+            repetition = []     # 重复警告
+            other = []          # 其他
 
             for entry in annotated_moves:
                 move_str = entry["move"]
                 anns = entry.get("annotations", [])
+                
+                # 分类判断
+                is_tactical = any(
+                    a in ["pin"] or a.startswith(("fork:", "sacrifice:"))
+                    for a in anns
+                )
+                is_positional = any(
+                    a in ["cross_river", "central_file", "flank"]
+                    for a in anns
+                )
+                is_check_capture = any(
+                    a in ["check"] or a.startswith("capture:")
+                    for a in anns
+                )
+                
                 if not anns:
                     other.append(move_str)
                 elif "repetition_warning" in anns:
                     # 重复警告单独分组
                     label_parts = [self._format_annotation(a) for a in anns]
                     repetition.append(f"{move_str} ({', '.join(label_parts)})")
-                elif "development" in anns and all(
-                    a == "development" for a in anns
-                ):
+                elif is_tactical:
+                    # 战术组合组（优先级最高）
+                    label_parts = [self._format_annotation(a) for a in anns]
+                    tactical.append(f"{move_str} ({', '.join(label_parts)})")
+                elif is_positional:
+                    # 战略位置组
+                    label_parts = [self._format_annotation(a) for a in anns]
+                    positional.append(f"{move_str} ({', '.join(label_parts)})")
+                elif "development" in anns and len(anns) == 1:
+                    # 纯出子走步
                     development.append(f"{move_str} (出车)")
-                else:
+                elif is_check_capture:
                     # 将军/吃子组
                     label_parts = [self._format_annotation(a) for a in anns]
                     check_capture.append(
                         f"{move_str} ({', '.join(label_parts)})"
                     )
+                else:
+                    # 混合标注放入其他
+                    label_parts = [self._format_annotation(a) for a in anns]
+                    other.append(f"{move_str} ({', '.join(label_parts)})")
+
+            # 按优先级展示
+            if tactical:
+                lines.append("")
+                lines.append("### 战术组合 ⭐")
+                lines.append(", ".join(tactical))
+
+            if positional:
+                lines.append("")
+                lines.append("### 战略位置")
+                lines.append(", ".join(positional))
 
             if check_capture:
                 lines.append("")
