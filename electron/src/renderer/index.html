@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM-Xiangqi 中国象棋AI对战</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 2em;
+      background: linear-gradient(90deg, #e74c3c, #f39c12);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .game-container {
+      display: flex;
+      gap: 30px;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .board-section {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .board {
+      background: #DEB887;
+      border-radius: 8px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 50px);
+      grid-template-rows: repeat(10, 50px);
+      gap: 0;
+    }
+
+    .cell {
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .cell.red { color: #c0392b; }
+    .cell.black { color: #2c3e50; }
+
+    .cell:hover {
+      background: rgba(255, 255, 0, 0.3);
+    }
+
+    .cell.selected {
+      background: rgba(255, 255, 0, 0.5);
+    }
+
+    .config-section {
+      width: 350px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .config-section h2 {
+      font-size: 1.2em;
+      margin-bottom: 15px;
+      color: #3498db;
+    }
+
+    .agent-config {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .agent-config:last-child {
+      border-bottom: none;
+    }
+
+    .agent-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .agent-title.red { color: #e74c3c; }
+    .agent-title.black { color: #95a5a6; }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85em;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 0.9em;
+    }
+
+    .provider-presets {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .preset-btn {
+      padding: 4px 10px;
+      border-radius: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.05);
+      color: #aaa;
+      font-size: 0.8em;
+      cursor: pointer;
+    }
+
+    .preset-btn:hover, .preset-btn.active {
+      border-color: #3498db;
+      color: #3498db;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: transform 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-start {
+      background: linear-gradient(135deg, #27ae60, #2ecc71);
+      color: #fff;
+    }
+
+    .btn-stop {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: #fff;
+    }
+
+    .status-box {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+
+    .status-box h3 {
+      font-size: 1em;
+      margin-bottom: 10px;
+    }
+
+    .status-text {
+      font-size: 0.9em;
+      color: #aaa;
+    }
+
+    .status-text.success { color: #2ecc71; }
+    .status-text.error { color: #e74c3c; }
+    .status-text.info { color: #3498db; }
+
+    .ascii-board {
+      font-family: monospace;
+      white-space: pre;
+      font-size: 12px;
+      background: #000;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .game-container {
+        flex-direction: column;
+      }
+      .config-section {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎮 LLM-Xiangqi 中国象棋AI对战</h1>
+  </header>
+
+  <div class="game-container">
+    <div class="board-section">
+      <div class="board">
+        <div class="board-grid" id="board">
+          <!-- 棋盘将通过JavaScript生成 -->
+        </div>
+      </div>
+      <div class="ascii-board" id="ascii-board">
+        等待游戏开始...
+      </div>
+    </div>
+
+    <div class="config-section">
+      <h2>⚙️ 配置</h2>
+      
+      <div class="agent-config">
+        <div class="agent-title red">🔴 红方 Agent</div>
+        <div class="provider-presets" data-agent="red">
+          <button class="preset-btn" data-provider="deepseek">DeepSeek</button>
+          <button class="preset-btn" data-provider="mimo">MiMo</button>
+          <button class="preset-btn" data-provider="minimax">MiniMax</button>
+        </div>
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="password" id="red-api-key" placeholder="输入 API Key">
+        </div>
+        <div class="form-group">
+          <label>Model</label>
+          <input type="text" id="red-model" placeholder="如: deepseek-chat">
+        </div>
+        <div class="form-group">
+          <label>Base URL</label>
+          <input type="text" id="red-base-url" placeholder="如: https://api.deepseek.com">
+        </div>
+      </div>
+
+      <div class="agent-config">
+        <div class="agent-title black">⚫ 黑方 Agent</div>
+        <div class="provider-presets" data-agent="black">
+          <button class="preset-btn" data-provider="deepseek">DeepSeek</button>
+          <button class="preset-btn" data-provider="mimo">MiMo</button>
+          <button class="preset-btn" data-provider="minimax">MiniMax</button>
+        </div>
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="password" id="black-api-key" placeholder="输入 API Key">
+        </div>
+        <div class="form-group">
+          <label>Model</label>
+          <input type="text" id="black-model" placeholder="如: deepseek-chat">
+        </div>
+        <div class="form-group">
+          <label>Base URL</label>
+          <input type="text" id="black-base-url" placeholder="如: https://api.deepseek.com">
+        </div>
+      </div>
+
+      <button class="btn btn-start" id="start-btn" onclick="startGame()">
+        🚀 启动游戏
+      </button>
+      <button class="btn btn-stop" id="stop-btn" onclick="stopGame()" style="display: none;">
+        ⏹ 停止游戏
+      </button>
+
+      <div class="status-box">
+        <h3>📊 游戏状态</h3>
+        <p class="status-text" id="status">等待配置...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Provider 预设
+    const PRESETS = {
+      deepseek: { model: 'deepseek-chat', baseUrl: 'https://api.deepseek.com' },
+      mimo: { model: 'mimo-v2-flash', baseUrl: 'https://api.xiaomimimo.com/v1' },
+      minimax: { model: 'MiniMax-M2.7', baseUrl: 'https://api.minimax.chat/v1' },
+    };
+
+    // WebSocket 连接
+    let ws = null;
+    let gameRunning = false;
+
+    // 初始化预设按钮
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const agent = e.target.closest('.provider-presets').dataset.agent;
+        const provider = e.target.dataset.provider;
+        const preset = PRESETS[provider];
+        
+        document.querySelectorAll(`.provider-presets[data-agent="${agent}"] .preset-btn`).forEach(b => {
+          b.classList.toggle('active', b.dataset.provider === provider);
+        });
+        
+        document.getElementById(`${agent}-model`).value = preset.model;
+        document.getElementById(`${agent}-base-url`).value = preset.baseUrl;
+      });
+    });
+
+    // 启动游戏
+    function startGame() {
+      const redKey = document.getElementById('red-api-key').value.trim();
+      const blackKey = document.getElementById('black-api-key').value.trim();
+      const redModel = document.getElementById('red-model').value.trim();
+      const blackModel = document.getElementById('black-model').value.trim();
+      const redUrl = document.getElementById('red-base-url').value.trim();
+      const blackUrl = document.getElementById('black-base-url').value.trim();
+
+      if (!redKey || !blackKey || !redModel || !blackModel || !redUrl || !blackUrl) {
+        updateStatus('请填写所有配置', 'error');
+        return;
+      }
+
+      updateStatus('正在连接服务器...', 'info');
+      
+      // 使用 WebSocket 连接
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname;
+      ws = new WebSocket(`${protocol}//${host}:8888/ws`);
+
+      ws.onopen = () => {
+        updateStatus('已连接，正在启动游戏...', 'info');
+        ws.send(JSON.stringify({
+          type: 'start_game',
+          config: {
+            red: { apiKey: redKey, model: redModel, baseUrl: redUrl, temperature: 0.7, maxTokens: 2048 },
+            black: { apiKey: blackKey, model: blackModel, baseUrl: blackUrl, temperature: 0.7, maxTokens: 2048 },
+          }
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleMessage(data);
+      };
+
+      ws.onerror = () => {
+        updateStatus('连接失败，请重启应用', 'error');
+      };
+
+      ws.onclose = () => {
+        if (gameRunning) {
+          updateStatus('连接已断开', 'error');
+          gameRunning = false;
+          document.getElementById('start-btn').style.display = 'block';
+          document.getElementById('stop-btn').style.display = 'none';
+        }
+      };
+    }
+
+    // 停止游戏
+    function stopGame() {
+      if (ws) {
+        ws.close();
+      }
+      gameRunning = false;
+      document.getElementById('start-btn').style.display = 'block';
+      document.getElementById('stop-btn').style.display = 'none';
+      updateStatus('游戏已停止', 'info');
+    }
+
+    // 处理消息
+    function handleMessage(data) {
+      switch (data.type) {
+        case 'game_started':
+          gameRunning = true;
+          document.getElementById('start-btn').style.display = 'none';
+          document.getElementById('stop-btn').style.display = 'block';
+          updateStatus(`游戏开始！红方 vs 黑方`, 'success');
+          updateBoard(data.fen);
+          break;
+        case 'move':
+          updateBoard(data.fen);
+          document.getElementById('ascii-board').textContent = data.ascii_board || '';
+          updateStatus(`${data.move_by} 走了 ${data.move}`, 'info');
+          break;
+        case 'game_over':
+          updateBoard(data.fen);
+          updateStatus(`🏆 游戏结束: ${data.result} - ${data.reason}`, 'success');
+          gameRunning = false;
+          document.getElementById('start-btn').style.display = 'block';
+          document.getElementById('stop-btn').style.display = 'none';
+          break;
+        case 'error':
+          updateStatus(`错误: ${data.message}`, 'error');
+          break;
+      }
+    }
+
+    // 更新状态
+    function updateStatus(text, type) {
+      const el = document.getElementById('status');
+      el.textContent = text;
+      el.className = `status-text ${type}`;
+    }
+
+    // 更新棋盘
+    function updateBoard(fen) {
+      const board = document.getElementById('board');
+      const rows = fen.split(' ')[0].split('/');
+      
+      board.innerHTML = '';
+      
+      for (let r = 9; r >= 0; r--) {
+        for (let c = 0; c < 9; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          
+          let idx = 0;
+          for (const char of rows[r]) {
+            if (char >= '1' && char <= '9') {
+              idx += parseInt(char);
+              if (idx - 1 === c) break;
+            } else {
+              if (idx === c) {
+                const isRed = char === char.toUpperCase();
+                cell.textContent = char.toUpperCase();
+                cell.classList.add(isRed ? 'red' : 'black');
+                break;
+              }
+              idx++;
+            }
+          }
+          
+          board.appendChild(cell);
+        }
+      }
+    }
+
+    // 初始化空棋盘
+    updateBoard('rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w');
+  </script>
+</body>
+</html>

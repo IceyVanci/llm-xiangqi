@@ -1,0 +1,46 @@
+{
+  "name": "llm-xiangqi",
+  "version": "1.0.0",
+  "description": "LLM Xiangqi - 中国象棋AI对战",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable",
+    "build:dir": "electron-builder --win --dir"
+  },
+  "author": "LLM-Xiangqi Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "electron-store": "^8.2.0",
+    "ws": "^8.14.2"
+  },
+  "build": {
+    "appId": "com.llmxiangqi.app",
+    "productName": "LLM-Xiangqi",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false,
+      "signingHashAlgorithms": null
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*"
+    ]
+  }
+}

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM-Xiangqi 启动器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #fff;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #e74c3c, #f39c12);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 1.1em;
+    }
+
+    .agents-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .agent-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 25px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .agent-card.red {
+      border-left: 4px solid #e74c3c;
+    }
+
+    .agent-card.black {
+      border-left: 4px solid #2c3e50;
+    }
+
+    .agent-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .agent-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5em;
+      margin-right: 15px;
+    }
+
+    .agent-card.red .agent-badge {
+      background: rgba(231, 76, 60, 0.2);
+      color: #e74c3c;
+    }
+
+    .agent-card.black .agent-badge {
+      background: rgba(44, 62, 80, 0.5);
+      color: #ecf0f1;
+    }
+
+    .agent-title {
+      font-size: 1.3em;
+      font-weight: 600;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #aaa;
+      font-size: 0.9em;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 1em;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+
+    input::placeholder {
+      color: #666;
+    }
+
+    .provider-presets {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .preset-btn {
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.05);
+      color: #aaa;
+      font-size: 0.85em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-btn:hover {
+      border-color: #3498db;
+      color: #3498db;
+    }
+
+    .preset-btn.active {
+      background: rgba(52, 152, 219, 0.2);
+      border-color: #3498db;
+      color: #3498db;
+    }
+
+    .saved-indicator {
+      display: inline-flex;
+      align-items: center;
+      color: #2ecc71;
+      font-size: 0.85em;
+      margin-left: 10px;
+    }
+
+    .saved-indicator::before {
+      content: '✓';
+      margin-right: 4px;
+    }
+
+    .advanced-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      color: #3498db;
+      font-size: 0.9em;
+      margin-top: 10px;
+      user-select: none;
+    }
+
+    .advanced-toggle::before {
+      content: '▶';
+      display: inline-block;
+      margin-right: 8px;
+      font-size: 0.8em;
+      transition: transform 0.3s;
+    }
+
+    .advanced-toggle.open::before {
+      transform: rotate(90deg);
+    }
+
+    .advanced-options {
+      display: none;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .advanced-options.show {
+      display: block;
+    }
+
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .slider-group input[type="range"] {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+    }
+
+    .slider-value {
+      min-width: 40px;
+      text-align: right;
+      color: #3498db;
+      font-weight: 600;
+    }
+
+    .actions {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+
+    .btn {
+      padding: 15px 40px;
+      border-radius: 10px;
+      border: none;
+      font-size: 1.1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #27ae60, #2ecc71);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 20px rgba(39, 174, 96, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .status-bar {
+      margin-top: 30px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .status-text {
+      color: #888;
+      font-size: 0.95em;
+    }
+
+    .status-text.success {
+      color: #2ecc71;
+    }
+
+    .status-text.error {
+      color: #e74c3c;
+    }
+
+    .status-text.info {
+      color: #3498db;
+    }
+
+    .info-box {
+      margin-top: 30px;
+      padding: 20px;
+      background: rgba(52, 152, 219, 0.1);
+      border-radius: 12px;
+      border: 1px solid rgba(52, 152, 219, 0.3);
+    }
+
+    .info-box h3 {
+      color: #3498db;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+
+    .info-box p {
+      color: #aaa;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 600px) {
+      .agents-container {
+        grid-template-columns: 1fr;
+      }
+      
+      h1 {
+        font-size: 1.8em;
+      }
+      
+      .actions {
+        flex-direction: column;
+      }
+      
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎮 LLM-Xiangqi 启动器</h1>
+      <p class="subtitle">配置 LLM API 并启动 3D 中国象棋对战</p>
+    </header>
+
+    <div class="agents-container">
+      <!-- 红方 Agent -->
+      <div class="agent-card red">
+        <div class="agent-header">
+          <div class="agent-badge">🔴</div>
+          <div class="agent-title">红方 Agent</div>
+        </div>
+
+        <div class="form-group">
+          <label>Provider 预设</label>
+          <div class="provider-presets" data-agent="red">
+            <button class="preset-btn" data-provider="deepseek">DeepSeek</button>
+            <button class="preset-btn" data-provider="mimo">MiMo</button>
+            <button class="preset-btn" data-provider="minimax">MiniMax</button>
+            <button class="preset-btn" data-provider="openai">OpenAI</button>
+            <button class="preset-btn" data-provider="custom">自定义</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="red-api-key">API Key <span class="saved-indicator" id="red-saved" style="display:none;"></span></label>
+          <input type="password" id="red-api-key" placeholder="输入你的 API Key">
+        </div>
+
+        <div class="form-group">
+          <label for="red-model">Model</label>
+          <input type="text" id="red-model" placeholder="如: deepseek-chat">
+        </div>
+
+        <div class="form-group">
+          <label for="red-base-url">Base URL</label>
+          <input type="text" id="red-base-url" placeholder="如: https://api.deepseek.com">
+        </div>
+
+        <div class="advanced-toggle" onclick="toggleAdvanced('red')">
+          高级选项
+        </div>
+        <div class="advanced-options" id="red-advanced">
+          <div class="form-group">
+            <label>Temperature</label>
+            <div class="slider-group">
+              <input type="range" id="red-temperature" min="0" max="2" step="0.1" value="0.7">
+              <span class="slider-value" id="red-temp-value">0.7</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Max Tokens</label>
+            <div class="slider-group">
+              <input type="range" id="red-max-tokens" min="256" max="8192" step="256" value="2048">
+              <span class="slider-value" id="red-tokens-value">2048</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 黑方 Agent -->
+      <div class="agent-card black">
+        <div class="agent-header">
+          <div class="agent-badge">⚫</div>
+          <div class="agent-title">黑方 Agent</div>
+        </div>
+
+        <div class="form-group">
+          <label>Provider 预设</label>
+          <div class="provider-presets" data-agent="black">
+            <button class="preset-btn" data-provider="deepseek">DeepSeek</button>
+            <button class="preset-btn" data-provider="mimo">MiMo</button>
+            <button class="preset-btn" data-provider="minimax">MiniMax</button>
+            <button class="preset-btn" data-provider="openai">OpenAI</button>
+            <button class="preset-btn" data-provider="custom">自定义</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="black-api-key">API Key <span class="saved-indicator" id="black-saved" style="display:none;"></span></label>
+          <input type="password" id="black-api-key" placeholder="输入你的 API Key">
+        </div>
+
+        <div class="form-group">
+          <label for="black-model">Model</label>
+          <input type="text" id="black-model" placeholder="如: deepseek-chat">
+        </div>
+
+        <div class="form-group">
+          <label for="black-base-url">Base URL</label>
+          <input type="text" id="black-base-url" placeholder="如: https://api.deepseek.com">
+        </div>
+
+        <div class="advanced-toggle" onclick="toggleAdvanced('black')">
+          高级选项
+        </div>
+        <div class="advanced-options" id="black-advanced">
+          <div class="form-group">
+            <label>Temperature</label>
+            <div class="slider-group">
+              <input type="range" id="black-temperature" min="0" max="2" step="0.1" value="0.7">
+              <span class="slider-value" id="black-temp-value">0.7</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Max Tokens</label>
+            <div class="slider-group">
+              <input type="range" id="black-max-tokens" min="256" max="8192" step="256" value="2048">
+              <span class="slider-value" id="black-tokens-value">2048</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="clearAll()">清除配置</button>
+      <button class="btn btn-primary" id="launch-btn" onclick="launchGame()">
+        🚀 启动游戏
+      </button>
+    </div>
+
+    <div class="status-bar">
+      <p class="status-text" id="status-text">请配置两个 Agent 的 API Key 后启动游戏</p>
+    </div>
+
+    <div class="info-box">
+      <h3>💡 安全说明</h3>
+      <p>
+        您的 API Key 仅保存在浏览器本地 (localStorage)，不会上传到任何服务器，也不会被 Git 追踪。
+        关闭页面后配置会保留，您可以随时通过"清除配置"按钮删除。
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Provider 预设配置
+    const PROVIDER_PRESETS = {
+      deepseek: {
+        model: 'deepseek-chat',
+        baseUrl: 'https://api.deepseek.com'
+      },
+      mimo: {
+        model: 'mimo-v2-flash',
+        baseUrl: 'https://api.xiaomimimo.com/v1'
+      },
+      minimax: {
+        model: 'MiniMax-M2.7',
+        baseUrl: 'https://api.minimax.chat/v1'
+      },
+      openai: {
+        model: 'gpt-4o-mini',
+        baseUrl: 'https://api.openai.com/v1'
+      },
+      custom: {
+        model: '',
+        baseUrl: ''
+      }
+    };
+
+    const STORAGE_KEY = 'llm_xiangqi_config';
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      loadConfig();
+      setupEventListeners();
+      updateStatus('请配置两个 Agent 的 API Key 后启动游戏', 'info');
+    });
+
+    // 设置事件监听
+    function setupEventListeners() {
+      // Provider 预设按钮
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const agent = e.target.closest('.provider-presets').dataset.agent;
+          const provider = e.target.dataset.provider;
+          selectProvider(agent, provider);
+        });
+      });
+
+      // Slider 值显示
+      ['red', 'black'].forEach(agent => {
+        document.getElementById(`${agent}-temperature`).addEventListener('input', (e) => {
+          document.getElementById(`${agent}-temp-value`).textContent = e.target.value;
+          saveConfig();
+        });
+        document.getElementById(`${agent}-max-tokens`).addEventListener('input', (e) => {
+          document.getElementById(`${agent}-tokens-value`).textContent = e.target.value;
+          saveConfig();
+        });
+      });
+
+      // 输入变化时保存
+      ['red', 'black'].forEach(agent => {
+        ['api-key', 'model', 'base-url'].forEach(field => {
+          document.getElementById(`${agent}-${field}`).addEventListener('input', saveConfig);
+        });
+      });
+    }
+
+    // 选择 Provider
+    function selectProvider(agent, provider) {
+      const preset = PROVIDER_PRESETS[provider];
+      
+      // 更新按钮状态
+      document.querySelectorAll(`.provider-presets[data-agent="${agent}"] .preset-btn`).forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.provider === provider);
+      });
+
+      // 填充预设值
+      if (preset.model) document.getElementById(`${agent}-model`).value = preset.model;
+      if (preset.baseUrl) document.getElementById(`${agent}-base-url`).value = preset.baseUrl;
+      
+      saveConfig();
+    }
+
+    // 切换高级选项
+    function toggleAdvanced(agent) {
+      const options = document.getElementById(`${agent}-advanced`);
+      const toggle = options.previousElementSibling;
+      options.classList.toggle('show');
+      toggle.classList.toggle('open');
+    }
+
+    // 保存配置到 localStorage
+    function saveConfig() {
+      const config = {
+        red: {
+          apiKey: document.getElementById('red-api-key').value,
+          model: document.getElementById('red-model').value,
+          baseUrl: document.getElementById('red-base-url').value,
+          temperature: parseFloat(document.getElementById('red-temperature').value),
+          maxTokens: parseInt(document.getElementById('red-max-tokens').value)
+        },
+        black: {
+          apiKey: document.getElementById('black-api-key').value,
+          model: document.getElementById('black-model').value,
+          baseUrl: document.getElementById('black-base-url').value,
+          temperature: parseFloat(document.getElementById('black-temperature').value),
+          maxTokens: parseInt(document.getElementById('black-max-tokens').value)
+        }
+      };
+      
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      
+      // 更新保存指示器
+      document.getElementById('red-saved').style.display = config.red.apiKey ? 'inline' : 'none';
+      document.getElementById('black-saved').style.display = config.black.apiKey ? 'inline' : 'none';
+    }
+
+    // 从 localStorage 加载配置
+    function loadConfig() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+
+      try {
+        const config = JSON.parse(saved);
+        
+        ['red', 'black'].forEach(agent => {
+          if (config[agent].apiKey) {
+            document.getElementById(`${agent}-api-key`).value = config[agent].apiKey;
+            document.getElementById(`${agent}-saved`).style.display = 'inline';
+          }
+          if (config[agent].model) {
+            document.getElementById(`${agent}-model`).value = config[agent].model;
+          }
+          if (config[agent].baseUrl) {
+            document.getElementById(`${agent}-base-url`).value = config[agent].baseUrl;
+          }
+          if (config[agent].temperature) {
+            document.getElementById(`${agent}-temperature`).value = config[agent].temperature;
+            document.getElementById(`${agent}-temp-value`).textContent = config[agent].temperature;
+          }
+          if (config[agent].maxTokens) {
+            document.getElementById(`${agent}-max-tokens`).value = config[agent].maxTokens;
+            document.getElementById(`${agent}-tokens-value`).textContent = config[agent].maxTokens;
+          }
+        });
+      } catch (e) {
+        console.error('Failed to load config:', e);
+      }
+    }
+
+    // 清除所有配置
+    function clearAll() {
+      if (confirm('确定要清除所有保存的配置吗？')) {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+      }
+    }
+
+    // 更新状态文本
+    function updateStatus(text, type = 'info') {
+      const status = document.getElementById('status-text');
+      status.textContent = text;
+      status.className = 'status-text ' + type;
+    }
+
+    // WebSocket 连接
+    let ws = null;
+
+    // 连接 WebSocket
+    function connectWebSocket() {
+      return new Promise((resolve, reject) => {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+        
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          resolve();
+        };
+        
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          reject(error);
+        };
+        
+        ws.onclose = () => {
+          console.log('WebSocket disconnected');
+        };
+        
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        };
+      });
+    }
+
+    // 处理 WebSocket 消息
+    function handleWebSocketMessage(data) {
+      switch (data.type) {
+        case 'init':
+          updateStatus('已连接到游戏服务器', 'info');
+          break;
+        case 'game_started':
+          updateStatus('✓ 游戏已开始！正在打开 3D 界面...', 'success');
+          // 打开 3D 游戏界面
+          setTimeout(() => {
+            const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+            window.open(`${protocol}//localhost:5173`, '_blank');
+          }, 1000);
+          break;
+        case 'move':
+          updateStatus(`回合 ${data.move_by}: ${data.move}`, 'info');
+          break;
+        case 'game_over':
+          updateStatus(`游戏结束: ${data.result} - ${data.reason}`, 'success');
+          break;
+        case 'error':
+          updateStatus('错误: ' + data.message, 'error');
+          break;
+      }
+    }
+
+    // 启动游戏
+    async function launchGame() {
+      const redApiKey = document.getElementById('red-api-key').value.trim();
+      const blackApiKey = document.getElementById('black-api-key').value.trim();
+      const redModel = document.getElementById('red-model').value.trim();
+      const blackModel = document.getElementById('black-model').value.trim();
+      const redBaseUrl = document.getElementById('red-base-url').value.trim();
+      const blackBaseUrl = document.getElementById('black-base-url').value.trim();
+
+      // 验证配置
+      if (!redApiKey || !blackApiKey) {
+        updateStatus('请输入两个 Agent 的 API Key', 'error');
+        return;
+      }
+
+      if (!redModel || !blackModel) {
+        updateStatus('请输入两个 Agent 的 Model', 'error');
+        return;
+      }
+
+      if (!redBaseUrl || !blackBaseUrl) {
+        updateStatus('请输入两个 Agent 的 Base URL', 'error');
+        return;
+      }
+
+      // 保存当前配置
+      saveConfig();
+
+      updateStatus('正在连接服务器...', 'info');
+
+      try {
+        const config = {
+          red: {
+            apiKey: redApiKey,
+            model: redModel,
+            baseUrl: redBaseUrl,
+            temperature: parseFloat(document.getElementById('red-temperature').value),
+            maxTokens: parseInt(document.getElementById('red-max-tokens').value)
+          },
+          black: {
+            apiKey: blackApiKey,
+            model: blackModel,
+            baseUrl: blackBaseUrl,
+            temperature: parseFloat(document.getElementById('black-temperature').value),
+            maxTokens: parseInt(document.getElementById('black-max-tokens').value)
+          }
+        };
+
+        // 连接 WebSocket 并发送开始游戏命令
+        await connectWebSocket();
+        
+        ws.send(JSON.stringify({
+          type: 'start_game',
+          config: config
+        }));
+
+        updateStatus('正在启动游戏...', 'info');
+        
+      } catch (e) {
+        updateStatus('无法连接到游戏服务器，请确保后端服务已启动', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

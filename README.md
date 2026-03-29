@@ -1,3 +1,8 @@
+
+# 本程序是使用electron实现的原始程序的GUI单文件版本
+
+使用了Minimax M2.7实现
+
 # LLM-Xiangqi / 中国象棋 LLM 对战框架
 
 [English](#english) | [中文](#中文)
