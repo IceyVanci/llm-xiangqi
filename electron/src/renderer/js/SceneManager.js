@@ -203,22 +203,22 @@ class SceneManager {
    * 初始化光照
    */
   _initLighting() {
-    // 环境光 - 提高强度
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    // 环境光 - 提高整体亮度
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
     this.scene.add(ambient);
     
     // 半球光 - 提供自然的上下光照
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe8d4b8, 0.4);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xf5e6c8, 0.5);
     hemiLight.position.set(0, 20, 0);
     this.scene.add(hemiLight);
     
-    // 主光源 - 从上方45度角照射
-    const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    mainLight.position.set(5, 15, 10);
+    // 主光源 - 从上方垂直偏右照射，均匀照亮棋盘
+    const mainLight = new THREE.DirectionalLight(0xfffaf0, 1.0);
+    mainLight.position.set(2, 20, 8);
     mainLight.target.position.set(0, 0, 0);
     mainLight.castShadow = true;
     
-    // 阴影配置
+    // 阴影配置 - 更柔和的阴影
     mainLight.shadow.mapSize.width = this.options.shadowMapSize;
     mainLight.shadow.mapSize.height = this.options.shadowMapSize;
     mainLight.shadow.camera.near = 1;
@@ -228,21 +228,22 @@ class SceneManager {
     mainLight.shadow.camera.top = 10;
     mainLight.shadow.camera.bottom = -10;
     mainLight.shadow.bias = -0.0001;
-    mainLight.shadow.radius = 1;
+    mainLight.shadow.radius = 4;
+    mainLight.shadow.normalBias = 0.02;
     
     this.mainLight = mainLight;
     this.scene.add(mainLight);
     this.scene.add(mainLight.target);
     
-    // 补光 - 从另一侧补光
-    const fillLight = new THREE.DirectionalLight(0xfff0e0, 0.5);
-    fillLight.position.set(-5, 10, -5);
+    // 补光 - 从左侧补光，平衡阴影
+    const fillLight = new THREE.DirectionalLight(0xfff5e6, 0.6);
+    fillLight.position.set(-8, 15, 0);
     this.scene.add(fillLight);
     
-    // 背面补光
-    const backLight = new THREE.DirectionalLight(0xe0f0ff, 0.3);
-    backLight.position.set(0, 5, -10);
-    this.scene.add(backLight);
+    // 右侧辅助光 - 减少右侧暗角
+    const rightLight = new THREE.DirectionalLight(0xe6f0ff, 0.4);
+    rightLight.position.set(10, 10, 5);
+    this.scene.add(rightLight);
   }
 
   /**

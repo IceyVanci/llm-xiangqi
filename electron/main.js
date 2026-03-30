@@ -431,6 +431,9 @@ function handleMessage(ws, msg) {
         case 'start_game':
             startGame(msg.config);
             break;
+        case 'reset_game':
+            resetGame();
+            break;
         case 'client.ready':
             // 客户端就绪
             console.log('[WS] Client ready');
@@ -529,6 +532,33 @@ async function startGame(config) {
     }
     
     gameRunning = false;
+}
+
+/**
+ * 重置游戏到初始状态
+ */
+function resetGame() {
+    console.log('[Game] Resetting game...');
+    gameRunning = false;
+    engine = new XiangqiEngine();
+    
+    // 通知所有客户端游戏已重置
+    broadcast({
+        type: 'game.init',
+        payload: {
+            fen: engine.current_fen,
+            turn: engine.current_color,
+            turn_number: 1,
+            status: 'playing',
+            players: {
+                Red: { name: '红方 AI', model: '' },
+                Black: { name: '黑方 AI', model: '' }
+            },
+            move_history: []
+        }
+    });
+    
+    console.log('[Game] Game reset complete');
 }
 
 async function callLLM(config, engine, color, legalMoves) {

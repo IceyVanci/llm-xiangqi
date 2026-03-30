@@ -773,45 +773,70 @@
      * 还原棋盘开始新的对局
      */
     function resetGame() {
-      // 断开现有 WebSocket 连接
-      if (wsClient) {
-        wsClient.close();
-        wsClient = null;
-      }
-      
-      // 重置游戏状态
-      gameRunning = false;
-      
-      // 重置状态管理器
-      if (stateManager) {
-        stateManager.reset();
-      }
-      
-      // 重置棋盘到初始布局
-      if (sceneManager) {
-        // 移除所有棋子
-        sceneManager.pieces.forEach((piece) => {
-          sceneManager.piecesGroup.remove(piece);
-        });
-        sceneManager.pieces.clear();
+      // 如果已连接，发送重置消息到服务器
+      if (wsClient && wsClient.ws && wsClient.ws.readyState === WebSocket.OPEN) {
+        wsClient.send({ type: 'reset_game' });
         
-        // 创建初始布局
-        const initialLayout = [
-          { position: 'i0', piece: 'R' }, { position: 'h0', piece: 'N' }, { position: 'g0', piece: 'B' },
-          { position: 'f0', piece: 'A' }, { position: 'e0', piece: 'K' }, { position: 'd0', piece: 'A' },
-          { position: 'c0', piece: 'B' }, { position: 'b0', piece: 'N' }, { position: 'a0', piece: 'R' },
-          { position: 'h2', piece: 'C' }, { position: 'd2', piece: 'P' }, { position: 'e2', piece: 'P' },
-          { position: 'f5', piece: 'P' }, { position: 'a3', piece: 'P' }, { position: 'c4', piece: 'P' },
-          { position: 'e4', piece: 'P' }, { position: 'g4', piece: 'P' }, { position: 'h5', piece: 'P' },
-          { position: 'b2', piece: 'C' }, { position: 'a2', piece: 'R' }, { position: 'i9', piece: 'r' },
-          { position: 'h9', piece: 'n' }, { position: 'g9', piece: 'b' }, { position: 'f9', piece: 'a' },
-          { position: 'e9', piece: 'k' }, { position: 'd9', piece: 'a' }, { position: 'c9', piece: 'b' },
-          { position: 'b9', piece: 'n' }, { position: 'a9', piece: 'r' }, { position: 'h7', piece: 'c' },
-          { position: 'd7', piece: 'p' }, { position: 'e7', piece: 'p' }, { position: 'f4', piece: 'p' },
-          { position: 'a6', piece: 'p' }, { position: 'c5', piece: 'p' }, { position: 'e5', piece: 'p' },
-          { position: 'g5', piece: 'p' }, { position: 'h4', piece: 'p' }, { position: 'b7', piece: 'c' },
-        ];
-        sceneManager.updateBoard(initialLayout);
+        // 重置状态管理器
+        if (stateManager) {
+          stateManager.reset();
+        }
+        
+        // 重置棋盘到初始布局
+        if (sceneManager) {
+          sceneManager.pieces.forEach((piece) => {
+            sceneManager.piecesGroup.remove(piece);
+          });
+          sceneManager.pieces.clear();
+          
+          const initialLayout = [
+            { position: 'i0', piece: 'R' }, { position: 'h0', piece: 'N' }, { position: 'g0', piece: 'B' },
+            { position: 'f0', piece: 'A' }, { position: 'e0', piece: 'K' }, { position: 'd0', piece: 'A' },
+            { position: 'c0', piece: 'B' }, { position: 'b0', piece: 'N' }, { position: 'a0', piece: 'R' },
+            { position: 'h2', piece: 'C' }, { position: 'd2', piece: 'P' }, { position: 'e2', piece: 'P' },
+            { position: 'f5', piece: 'P' }, { position: 'a3', piece: 'P' }, { position: 'c4', piece: 'P' },
+            { position: 'e4', piece: 'P' }, { position: 'g4', piece: 'P' }, { position: 'h5', piece: 'P' },
+            { position: 'b2', piece: 'C' }, { position: 'a2', piece: 'R' }, { position: 'i9', piece: 'r' },
+            { position: 'h9', piece: 'n' }, { position: 'g9', piece: 'b' }, { position: 'f9', piece: 'a' },
+            { position: 'e9', piece: 'k' }, { position: 'd9', piece: 'a' }, { position: 'c9', piece: 'b' },
+            { position: 'b9', piece: 'n' }, { position: 'a9', piece: 'r' }, { position: 'h7', piece: 'c' },
+            { position: 'd7', piece: 'p' }, { position: 'e7', piece: 'p' }, { position: 'f4', piece: 'p' },
+            { position: 'a6', piece: 'p' }, { position: 'c5', piece: 'p' }, { position: 'e5', piece: 'p' },
+            { position: 'g5', piece: 'p' }, { position: 'h4', piece: 'p' }, { position: 'b7', piece: 'c' },
+          ];
+          sceneManager.updateBoard(initialLayout);
+        }
+      } else {
+        // 未连接时，仅本地重置
+        gameRunning = false;
+        
+        if (stateManager) {
+          stateManager.reset();
+        }
+        
+        if (sceneManager) {
+          sceneManager.pieces.forEach((piece) => {
+            sceneManager.piecesGroup.remove(piece);
+          });
+          sceneManager.pieces.clear();
+          
+          const initialLayout = [
+            { position: 'i0', piece: 'R' }, { position: 'h0', piece: 'N' }, { position: 'g0', piece: 'B' },
+            { position: 'f0', piece: 'A' }, { position: 'e0', piece: 'K' }, { position: 'd0', piece: 'A' },
+            { position: 'c0', piece: 'B' }, { position: 'b0', piece: 'N' }, { position: 'a0', piece: 'R' },
+            { position: 'h2', piece: 'C' }, { position: 'd2', piece: 'P' }, { position: 'e2', piece: 'P' },
+            { position: 'f5', piece: 'P' }, { position: 'a3', piece: 'P' }, { position: 'c4', piece: 'P' },
+            { position: 'e4', piece: 'P' }, { position: 'g4', piece: 'P' }, { position: 'h5', piece: 'P' },
+            { position: 'b2', piece: 'C' }, { position: 'a2', piece: 'R' }, { position: 'i9', piece: 'r' },
+            { position: 'h9', piece: 'n' }, { position: 'g9', piece: 'b' }, { position: 'f9', piece: 'a' },
+            { position: 'e9', piece: 'k' }, { position: 'd9', piece: 'a' }, { position: 'c9', piece: 'b' },
+            { position: 'b9', piece: 'n' }, { position: 'a9', piece: 'r' }, { position: 'h7', piece: 'c' },
+            { position: 'd7', piece: 'p' }, { position: 'e7', piece: 'p' }, { position: 'f4', piece: 'p' },
+            { position: 'a6', piece: 'p' }, { position: 'c5', piece: 'p' }, { position: 'e5', piece: 'p' },
+            { position: 'g5', piece: 'p' }, { position: 'h4', piece: 'p' }, { position: 'b7', piece: 'c' },
+          ];
+          sceneManager.updateBoard(initialLayout);
+        }
       }
       
       // 清空走步历史
@@ -822,12 +847,6 @@
       
       // 更新 UI
       document.getElementById('turn-info').textContent = '等待游戏开始...';
-      document.getElementById('connection-status').textContent = '已断开';
-      document.getElementById('connection-status').className = 'status-badge disconnected';
-      
-      // 显示启动按钮，隐藏停止按钮
-      document.getElementById('start-btn').style.display = 'block';
-      document.getElementById('stop-btn').style.display = 'none';
       
       // 清空 AI 日志
       redLogs = [];
