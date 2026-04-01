@@ -431,6 +431,9 @@ function handleMessage(ws, msg) {
         case 'start_game':
             startGame(msg.config);
             break;
+        case 'stop_game':
+            stopGame();
+            break;
         case 'reset_game':
             resetGame();
             break;
@@ -503,9 +506,14 @@ async function startGame(config) {
                     captured: result.captured,
                     fen_after: result.fen,
                     turn: engine.current_color,
-                    turn_number: ++turnNumber
+                    turn_number: turnNumber
                 }
             });
+            
+            // 黑方走完后，回合数+1
+            if (currentTurn === 'Black') {
+                turnNumber++;
+            }
             
             console.log(`[Game] ${currentTurn}: ${move}`);
             
@@ -532,6 +540,26 @@ async function startGame(config) {
     }
     
     gameRunning = false;
+}
+
+/**
+ * 停止游戏 - 保持棋盘状态，只停止 LLM 对话
+ */
+function stopGame() {
+    console.log('[Game] Stopping game...');
+    gameRunning = false;
+    
+    // 通知所有客户端游戏已停止
+    broadcast({
+        type: 'game.stopped',
+        payload: {
+            status: 'stopped',
+            fen: engine ? engine.current_fen : INITIAL_FEN,
+            move_history: engine ? engine.move_history : []
+        }
+    });
+    
+    console.log('[Game] Game stopped');
 }
 
 /**

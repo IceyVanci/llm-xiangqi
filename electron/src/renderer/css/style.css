@@ -525,7 +525,7 @@ body {
 .ai-log-section {
   margin-top: 10px;
   flex-shrink: 0;
-  max-height: 200px;
+  max-height: 600px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -560,7 +560,7 @@ body {
   display: none;
   flex: 1;
   min-height: 40px;
-  max-height: 60px;
+  max-height: 180px;
   overflow-y: auto;
   font-size: 11px;
   background: #111;

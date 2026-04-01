@@ -14,16 +14,16 @@ const RENDERER_TYPE = {
   WEBGL2: 'webgl2',
 }
 
-// 棋盘配置
+// 棋盘配置 (与原始项目一致)
 const BOARD_CONFIG = {
   width: 9,      // 9 列
   height: 10,    // 10 行
   cellSize: 1.0,
   colors: {
     background: 0x0a0a0f,  // 深邃墨黑
-    board: 0xf5e6c8,       // 明亮木纹色
-    line: 0x4a3728,        // 深褐色线条
-    river: 0x8b7355,       // 河界颜色 - 浅棕色，明显区分
+    board: 0xe8d4b8,       // 明亮木纹色，高对比
+    line: 0x1a0f0a,        // 深褐色，强对比线条
+    river: 0x2d1f16,       // 中褐色，清晰可辨（与原始项目一致）
   },
 }
 
@@ -160,21 +160,36 @@ class SceneManager {
     this.rendererType = RENDERER_TYPE.WEBGL2;
     console.info('[Scene] Using WebGL 2.0 renderer');
     
-    // 配置渲染器 - 使用 CSS 像素尺寸，确保响应式
+    // 获取物理像素尺寸（容器实际分辨率）
+    const dpr = Math.min(window.devicePixelRatio, 2);
     const cssWidth = this.canvas.clientWidth || this.canvas.offsetWidth || 800;
     const cssHeight = this.canvas.clientHeight || this.canvas.offsetHeight || 600;
+    const physicalWidth = cssWidth * dpr;
+    const physicalHeight = cssHeight * dpr;
     
-    this.renderer.setSize(cssWidth, cssHeight, false); // false = 不设置 canvas.width/height
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // 设置画布为物理像素尺寸
+    this.canvas.width = physicalWidth;
+    this.canvas.height = physicalHeight;
+    
+    this.renderer.setSize(cssWidth, cssHeight, false); // false = 不设置 canvas.width/height（已手动设置）
+    this.renderer.setPixelRatio(dpr);
+    
+    console.info(`[Scene] Canvas resolution: ${physicalWidth}x${physicalHeight} (CSS: ${cssWidth}x${cssHeight}, DPR: ${dpr})`);
     
     // 阴影配置
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = true;
     
-    // 处理窗口大小变化
+    // 使用 ResizeObserver 监听容器尺寸变化（更精确）
     this._resizeHandler = () => this._handleResize();
     window.addEventListener('resize', this._resizeHandler);
+    
+    // 使用 ResizeObserver 监听容器变化
+    if (typeof ResizeObserver !== 'undefined') {
+      this._resizeObserver = new ResizeObserver(() => this._handleResize());
+      this._resizeObserver.observe(this.canvas.parentElement || document.body);
+    }
   }
 
   /**
@@ -203,56 +218,44 @@ class SceneManager {
   }
 
   /**
-   * 初始化光照
+   * 初始化光照 (与原始项目一致)
    */
   _initLighting() {
-    // 环境光 - 提高整体基础亮度
-    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+    // 环境光 - 暖白色，提供基础照明
+    const ambient = new THREE.AmbientLight(0xfff8e7, 0.6);
     this.scene.add(ambient);
     
-    // 半球光 - 提供自然的上下光照（天空/地面颜色）
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe8dcc8, 0.6);
-    hemiLight.position.set(0, 50, 0);
+    // 半球光 - 模拟天空和地面的自然光照
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xd4b896, 0.5);
+    hemiLight.position.set(0, 20, 0);
     this.scene.add(hemiLight);
     
-    // 主光源 - 从上方45度角照射，均匀照亮整个棋盘
-    const mainLight = new THREE.DirectionalLight(0xfff8f0, 1.2);
-    mainLight.position.set(8, 20, 12);
+    // 主光源 (产生阴影) - 固定在空间坐标
+    const mainLight = new THREE.DirectionalLight(0xfff8e7, 1.0);
+    mainLight.position.set(8, 12, 8);
     mainLight.target.position.set(0, 0, 0);
     mainLight.castShadow = true;
     
-    // 阴影配置 - 确保覆盖整个棋盘（9列 x 10行）
+    // 阴影配置 - 确保覆盖整个棋盘
     mainLight.shadow.mapSize.width = this.options.shadowMapSize;
     mainLight.shadow.mapSize.height = this.options.shadowMapSize;
-    mainLight.shadow.camera.near = 1;
-    mainLight.shadow.camera.far = 80;
-    // 扩大阴影范围覆盖整个棋盘区域
-    mainLight.shadow.camera.left = -12;
-    mainLight.shadow.camera.right = 12;
-    mainLight.shadow.camera.top = 12;
-    mainLight.shadow.camera.bottom = -12;
-    mainLight.shadow.bias = -0.0005;
+    mainLight.shadow.camera.near = 0.5;
+    mainLight.shadow.camera.far = 50;
+    mainLight.shadow.camera.left = -8;
+    mainLight.shadow.camera.right = 8;
+    mainLight.shadow.camera.top = 8;
+    mainLight.shadow.camera.bottom = -8;
+    mainLight.shadow.bias = -0.0001;
     mainLight.shadow.radius = 2;
-    mainLight.shadow.normalBias = 0.02;
     
     this.mainLight = mainLight;
     this.scene.add(mainLight);
     this.scene.add(mainLight.target);
     
-    // 补光 - 从左侧照射，平衡阴影
-    const fillLight = new THREE.DirectionalLight(0xfff0e6, 0.5);
-    fillLight.position.set(-10, 15, 0);
+    // 补光 - 从另一侧提供柔和照明
+    const fillLight = new THREE.DirectionalLight(0xfff8e7, 0.4);
+    fillLight.position.set(-5, 8, -5);
     this.scene.add(fillLight);
-    
-    // 背面补光 - 减少背面暗角
-    const backLight = new THREE.DirectionalLight(0xe6f0ff, 0.4);
-    backLight.position.set(0, 10, -15);
-    this.scene.add(backLight);
-    
-    // 底部环境光反射 - 模拟棋盘台面反射
-    const bottomLight = new THREE.PointLight(0xf5e6c8, 0.3, 20);
-    bottomLight.position.set(0, -5, 0);
-    this.scene.add(bottomLight);
   }
 
   /**
@@ -273,7 +276,7 @@ class SceneManager {
   }
 
   /**
-   * 创建程序化棋盘
+   * 创建程序化棋盘 (与原始项目一致)
    */
   _createBoard() {
     const { width, height, cellSize, colors } = BOARD_CONFIG;
@@ -299,7 +302,7 @@ class SceneManager {
   }
 
   /**
-   * 创建河界区域
+   * 创建河界区域 (与原始项目一致)
    */
   _createRiverArea() {
     const { cellSize, colors } = BOARD_CONFIG;
@@ -309,9 +312,9 @@ class SceneManager {
     
     const riverGeometry = new THREE.PlaneGeometry(riverWidth, riverHeight);
     const riverMaterial = new THREE.MeshStandardMaterial({
-      color: colors.river,
-      roughness: 0.9,
-      metalness: 0.0,
+      color: colors.board,  // 与棋盘同色
+      roughness: 0.8,
+      metalness: 0.05,
     });
     
     const river = new THREE.Mesh(riverGeometry, riverMaterial);
@@ -414,7 +417,7 @@ class SceneManager {
   }
 
   /**
-   * 创建楚河汉界文字
+   * 创建楚河汉界文字 (与原始项目一致)
    */
   _createRiverLabels() {
     const { colors } = BOARD_CONFIG;
@@ -430,10 +433,13 @@ class SceneManager {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
+    // 使用河界颜色 (与原始项目一致)
     const riverColorHex = colors.river.toString(16).padStart(6, '0');
     ctx.fillStyle = '#' + riverColorHex;
     ctx.fillText('楚河', 140, 64);
     ctx.fillText('汉界', 380, 64);
+    
+    console.info('[Scene] River label color:', ctx.fillStyle, 'from', colors.river);
     
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
@@ -455,7 +461,7 @@ class SceneManager {
   }
 
   /**
-   * 创建程序化棋子
+   * 创建程序化棋子 (与原始项目一致)
    */
   createPiece(pieceChar, iccs) {
     const color = pieceChar === pieceChar.toUpperCase() ? 'red' : 'black';
@@ -464,24 +470,20 @@ class SceneManager {
     
     const group = new THREE.Group();
     
-    // 底座 - 使用 StandardMaterial
+    // 底座 - 使用 LambertMaterial (与原始项目一致)
     const baseGeometry = new THREE.CylinderGeometry(config.radius, config.radius + 0.02, 0.08, 32);
-    const baseMaterial = new THREE.MeshStandardMaterial({
+    const baseMaterial = new THREE.MeshLambertMaterial({
       color: colors.base,
-      roughness: 0.4,
-      metalness: 0.1,
     });
     const base = new THREE.Mesh(baseGeometry, baseMaterial);
     base.castShadow = true;
     base.receiveShadow = true;
     group.add(base);
     
-    // 主体 - 使用 StandardMaterial
+    // 主体 - 使用 LambertMaterial (与原始项目一致)
     const bodyGeometry = new THREE.CylinderGeometry(config.radius - 0.02, config.radius, config.height - 0.1, 32);
-    const bodyMaterial = new THREE.MeshStandardMaterial({
+    const bodyMaterial = new THREE.MeshLambertMaterial({
       color: colors.body,
-      roughness: 0.3,
-      metalness: 0.0,
     });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
     body.position.y = config.height / 2;
@@ -794,13 +796,18 @@ class SceneManager {
   _handleResize() {
     if (!this.camera || !this.renderer) return;
     
-    const width = this.canvas.clientWidth;
-    const height = this.canvas.clientHeight;
+    const dpr = Math.min(window.devicePixelRatio, 2);
+    const cssWidth = this.canvas.clientWidth;
+    const cssHeight = this.canvas.clientHeight;
     
-    this.camera.aspect = width / height;
+    // 更新物理像素尺寸
+    this.canvas.width = cssWidth * dpr;
+    this.canvas.height = cssHeight * dpr;
+    
+    this.camera.aspect = cssWidth / cssHeight;
     this.camera.updateProjectionMatrix();
     
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(cssWidth, cssHeight, false);
   }
 
   /**

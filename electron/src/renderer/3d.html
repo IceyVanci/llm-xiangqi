@@ -472,13 +472,15 @@
     }
     
     function stopGame() {
-      if (wsClient) {
-        wsClient.close();
-        wsClient = null;
+      // 发送停止游戏消息到服务器（保持棋盘状态）
+      if (wsClient && wsClient.ws && wsClient.ws.readyState === WebSocket.OPEN) {
+        wsClient.send({ type: 'stop_game' });
       }
+      // 不关闭 WebSocket 连接，只更新 UI
       gameRunning = false;
       document.getElementById('start-btn').style.display = 'block';
       document.getElementById('stop-btn').style.display = 'none';
+      document.getElementById('turn-info').textContent = '⏸ 游戏已停止';
     }
     
       // ============================================
@@ -497,6 +499,9 @@
             break;
           case 'game.game_over':
             handleGameOver(message.payload);
+            break;
+          case 'game.stopped':
+            handleGameStopped(message.payload);
             break;
           case 'game.ai_log':
             handleAILog(message.payload);
@@ -645,6 +650,17 @@
        */
       function handleServerError(error) {
         showError(`服务器错误: ${error.message} (${error.code})`);
+      }
+      
+      /**
+       * 处理游戏停止（保持棋盘状态）
+       */
+      function handleGameStopped(data) {
+        gameRunning = false;
+        document.getElementById('start-btn').style.display = 'block';
+        document.getElementById('stop-btn').style.display = 'none';
+        document.getElementById('turn-info').textContent = '⏸ 游戏已停止';
+        // 不清空棋盘状态，保持当前局面
       }
     
     // ============================================
@@ -846,6 +862,11 @@
       blackLogs = [];
       document.getElementById('red-log-content').innerHTML = '';
       document.getElementById('black-log-content').innerHTML = '';
+      
+      // 重置按钮状态
+      gameRunning = false;
+      document.getElementById('start-btn').style.display = 'block';
+      document.getElementById('stop-btn').style.display = 'none';
       
       console.info('[App] Game reset');
     }
