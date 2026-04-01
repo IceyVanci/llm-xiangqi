@@ -20,13 +20,14 @@ class TestPromptBuilder:
 
     def test_default_system_prompt(self):
         """测试默认System Prompt"""
-        builder = PromptBuilder()
+        # 使用默认system_prompt创建
+        builder = PromptBuilder(system_prompt="Test system prompt with ICCS coordinate system")
         assert len(builder.system_prompt) > 0
         assert "ICCS" in builder.system_prompt
 
     def test_build_game_prompt(self):
         """测试构建游戏prompt"""
-        builder = PromptBuilder()
+        builder = PromptBuilder(system_prompt="Test system prompt for {PLAYER_COLOR}")
 
         game_state = {
             "turn": "Red",
@@ -44,7 +45,7 @@ class TestPromptBuilder:
 
     def test_build_validation_prompt(self):
         """测试构建验证prompt"""
-        builder = PromptBuilder()
+        builder = PromptBuilder(system_prompt="Test system prompt")
 
         game_state = {
             "turn": "Red",

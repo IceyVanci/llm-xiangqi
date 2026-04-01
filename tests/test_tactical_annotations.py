@@ -77,7 +77,8 @@ class TestCentralFileAnnotation:
     def test_cannon_central_file(self):
         """测试炮走到中路有central_file标注"""
         # 红炮在b2，红帅d0，黑将e9
-        fen = "4k4/9/9/9/9/9/9/1C6/9/3K5 w - - 0 1"
+        # 修正FEN：需要9列，"1C6" 是8列，应该是 "1C5C1" 格式
+        fen = "4k4/9/9/9/9/9/9/1C5C1/9/3K5 w - - 0 1"
         engine = RefereeEngine(fen)
         annotated = engine.get_annotated_moves()
         
@@ -108,7 +109,8 @@ class TestFlankAnnotation:
     def test_cannon_flank(self):
         """测试炮走到肋道有flank标注"""
         # 红炮在b2，走到d2（肋道），黑将e9，红帅d0
-        fen = "4k4/9/9/9/9/9/9/1C6/9/3K5 w - - 0 1"
+        # 修正FEN：需要9列，"1C6" 是8列，应该是 "1C5C1" 格式
+        fen = "4k4/9/9/9/9/9/9/1C5C1/9/3K5 w - - 0 1"
         engine = RefereeEngine(fen)
         annotated = engine.get_annotated_moves()
         

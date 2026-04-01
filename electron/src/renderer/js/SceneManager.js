@@ -160,8 +160,11 @@ class SceneManager {
     this.rendererType = RENDERER_TYPE.WEBGL2;
     console.info('[Scene] Using WebGL 2.0 renderer');
     
-    // 配置渲染器
-    this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
+    // 配置渲染器 - 使用 CSS 像素尺寸，确保响应式
+    const cssWidth = this.canvas.clientWidth || this.canvas.offsetWidth || 800;
+    const cssHeight = this.canvas.clientHeight || this.canvas.offsetHeight || 600;
+    
+    this.renderer.setSize(cssWidth, cssHeight, false); // false = 不设置 canvas.width/height
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     
     // 阴影配置
@@ -203,47 +206,53 @@ class SceneManager {
    * 初始化光照
    */
   _initLighting() {
-    // 环境光 - 提高整体亮度
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    // 环境光 - 提高整体基础亮度
+    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
     this.scene.add(ambient);
     
-    // 半球光 - 提供自然的上下光照
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xf5e6c8, 0.5);
-    hemiLight.position.set(0, 20, 0);
+    // 半球光 - 提供自然的上下光照（天空/地面颜色）
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe8dcc8, 0.6);
+    hemiLight.position.set(0, 50, 0);
     this.scene.add(hemiLight);
     
-    // 主光源 - 从上方垂直偏右照射，均匀照亮棋盘
-    const mainLight = new THREE.DirectionalLight(0xfffaf0, 1.0);
-    mainLight.position.set(2, 20, 8);
+    // 主光源 - 从上方45度角照射，均匀照亮整个棋盘
+    const mainLight = new THREE.DirectionalLight(0xfff8f0, 1.2);
+    mainLight.position.set(8, 20, 12);
     mainLight.target.position.set(0, 0, 0);
     mainLight.castShadow = true;
     
-    // 阴影配置 - 更柔和的阴影
+    // 阴影配置 - 确保覆盖整个棋盘（9列 x 10行）
     mainLight.shadow.mapSize.width = this.options.shadowMapSize;
     mainLight.shadow.mapSize.height = this.options.shadowMapSize;
     mainLight.shadow.camera.near = 1;
-    mainLight.shadow.camera.far = 50;
-    mainLight.shadow.camera.left = -10;
-    mainLight.shadow.camera.right = 10;
-    mainLight.shadow.camera.top = 10;
-    mainLight.shadow.camera.bottom = -10;
-    mainLight.shadow.bias = -0.0001;
-    mainLight.shadow.radius = 4;
+    mainLight.shadow.camera.far = 80;
+    // 扩大阴影范围覆盖整个棋盘区域
+    mainLight.shadow.camera.left = -12;
+    mainLight.shadow.camera.right = 12;
+    mainLight.shadow.camera.top = 12;
+    mainLight.shadow.camera.bottom = -12;
+    mainLight.shadow.bias = -0.0005;
+    mainLight.shadow.radius = 2;
     mainLight.shadow.normalBias = 0.02;
     
     this.mainLight = mainLight;
     this.scene.add(mainLight);
     this.scene.add(mainLight.target);
     
-    // 补光 - 从左侧补光，平衡阴影
-    const fillLight = new THREE.DirectionalLight(0xfff5e6, 0.6);
-    fillLight.position.set(-8, 15, 0);
+    // 补光 - 从左侧照射，平衡阴影
+    const fillLight = new THREE.DirectionalLight(0xfff0e6, 0.5);
+    fillLight.position.set(-10, 15, 0);
     this.scene.add(fillLight);
     
-    // 右侧辅助光 - 减少右侧暗角
-    const rightLight = new THREE.DirectionalLight(0xe6f0ff, 0.4);
-    rightLight.position.set(10, 10, 5);
-    this.scene.add(rightLight);
+    // 背面补光 - 减少背面暗角
+    const backLight = new THREE.DirectionalLight(0xe6f0ff, 0.4);
+    backLight.position.set(0, 10, -15);
+    this.scene.add(backLight);
+    
+    // 底部环境光反射 - 模拟棋盘台面反射
+    const bottomLight = new THREE.PointLight(0xf5e6c8, 0.3, 20);
+    bottomLight.position.set(0, -5, 0);
+    this.scene.add(bottomLight);
   }
 
   /**

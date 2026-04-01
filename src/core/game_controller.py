@@ -13,6 +13,7 @@ from .state_serializer import (
     GameState,
     GamePhase,
     GameResult,
+    GameEndReason,
     MoveResult,
 )
 
@@ -38,6 +39,7 @@ class GameController:
         self.phase = GamePhase.RED_TO_MOVE
         self.result = GameResult.IN_PROGRESS
         self.result_reason: Optional[str] = None
+        self.end_reason: Optional[GameEndReason] = None
 
     def get_current_state(self) -> GameState:
         """获取当前游戏状态"""
@@ -87,6 +89,8 @@ class GameController:
                 self.phase = GamePhase.GAME_OVER
                 self.result = self._map_reason_to_result(reason)
                 self.result_reason = reason
+                self.end_reason = GameEndReason.from_result_string(reason)
+                state.end_reason = self.end_reason
             else:
                 if self.phase == GamePhase.RED_TO_MOVE:
                     self.phase = GamePhase.BLACK_TO_MOVE
@@ -146,6 +150,7 @@ class GameController:
         self.phase = GamePhase.RED_TO_MOVE
         self.result = GameResult.IN_PROGRESS
         self.result_reason = None
+        self.end_reason = None
 
     def get_game_info(self) -> Dict[str, Any]:
         """获取游戏信息"""
@@ -300,9 +305,11 @@ class LLMAgentGameController(GameController):
                 if self.phase == GamePhase.RED_TO_MOVE:
                     self.result = GameResult.BLACK_WIN
                     self.result_reason = f"Red resigned: {result.thought}"
+                    self.end_reason = GameEndReason.RED_RESIGNATION
                 else:
                     self.result = GameResult.RED_WIN
                     self.result_reason = f"Black resigned: {result.thought}"
+                    self.end_reason = GameEndReason.BLACK_RESIGNATION
                 self.phase = GamePhase.GAME_OVER
                 return MoveResult(success=True, error=None, thought=f"投降认输: {result.thought}")
 

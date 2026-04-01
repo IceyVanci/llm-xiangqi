@@ -251,12 +251,7 @@
       const canvas = document.getElementById('game-canvas');
       const container = document.getElementById('canvas-container');
       
-      // 强制刷新布局以确保容器尺寸正确
-      container.style.display = 'block';
-      container.style.width = '100%';
-      container.style.height = '100%';
-      
-      // 等待下一个渲染帧以确保布局完成
+      // 等待布局稳定
       await new Promise(resolve => requestAnimationFrame(resolve));
       await new Promise(resolve => setTimeout(resolve, 50));
       
@@ -266,9 +261,7 @@
       
       console.info('[Scene] Canvas container size:', width, 'x', height);
       
-      // 设置画布像素尺寸和 CSS 尺寸
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
+      // 设置画布像素尺寸
       canvas.width = width;
       canvas.height = height;
       
