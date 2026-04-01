@@ -8,22 +8,31 @@
 > 📄 查看原项目说明: [README-original.md](./README-original.md)
 
 中国象棋 AI 对战桌面应用 - 单文件 EXE，双击即用！
-## 可供测试的免费API平台和模型
-仅供参考，自行注册并承担使用风险
-更新于2026.4.1
- Openrouter
- >stepfun/step-3.5-flash:free 响应较快
- >qwen/qwen3.6-plus-preview:free 响应较快，流量控制明显但可用
- >nvidia/nemotron-3-super-120b-a12b:free 响应慢
-ZenMux
->z-ai/glm-4.7-flash-free 响应慢，流量控制严重
->stepfun/step-3.5-flash-free 响应较快
->sapiens-ai/agnes-1.5-lite 不太聪明
->sapiens-ai/agnes-1.5-pro 响应较快，流量控制明显但可用
-NVIDIA NIM 响应速度都不咋地
->deepseek-ai/deepseek-v3.2
->moonshotai/kimi-k2-instruct
->stepfun-ai/step-3.5-flash
+## 可供测试的免费 API 平台和模型
+
+> 📋 仅供参考，自行注册并承担使用风险  
+> 🗓 更新于 2026.4.1
+
+### Openrouter
+
+- `stepfun/step-3.5-flash` - 响应较快
+- `qwen/qwen3.6-plus-preview` - 响应较快，流量控制明显但可用
+- `nvidia/nemotron-3-super-120b-a12b` - 响应慢
+
+### ZenMux
+
+- `z-ai/glm-4.7-flash-free` - 响应慢，流量控制严重
+- `stepfun/step-3.5-flash-free` - 响应较快
+- `sapiens-ai/agnes-1.5-lite` - 不太聪明
+- `sapiens-ai/agnes-1.5-pro` - 响应较快，流量控制明显但可用
+
+### NVIDIA NIM
+
+> ⚠️ 响应速度都不咋地
+
+- `deepseek-ai/deepseek-v3.2`
+- `moonshotai/kimi-k2-instruct`
+- `stepfun-ai/step-3.5-flash`
 
 ## 功能特性
 
